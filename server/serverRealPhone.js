@@ -173,30 +173,39 @@ app.get('/tracks/:albumId', (req, res) => {
 
 app.post('/getQueue', (req, res) => {
   const { queue } = req.body;
-
-
+  if (!queue || !Array.isArray(queue) || queue.length === 0) return res.json([]);
 
   const placeholders = queue.map(() => '?').join(',');
 
-  db.all(
-    `SELECT track_id, title, filename FROM tracks WHERE track_id IN (${placeholders})`,
-    queue,
-    (err, rows) => {
-      if (err) {
-        console.error('Ошибка SQL:', err.message);
-        return res.status(500).json({ error: err.message });
-      }
+  // Добавляем JOIN, чтобы получить ИМЯ АРТИСТА и КАРТИНКУ АЛЬБОМА
+  const sql = `
+    SELECT 
+      t.track_id AS id, 
+      t.title, 
+      t.filename, 
+      ar.name AS artist,
+      al.img AS artwork
+    FROM tracks t
+    JOIN albums al ON t.album_id = al.album_id
+    JOIN artists ar ON al.artist_id = ar.artist_id
+    WHERE t.track_id IN (${placeholders})
+  `;
 
-      const tracksQueue = rows.map(track => ({
-        id: track.track_id,
-        name: track.title,
-        filename: track.filename
-      }));
+  db.all(sql, queue, (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
 
-      console.log("Получено из запроса в БД:", tracksQueue);
-      res.json(tracksQueue);
-    }
-  );
+    const tracksQueue = rows.map(track => ({
+      id: track.id,
+      title: track.title,
+      artist: track.artist,
+      // Собираем ПОЛНУЮ ссылку прямо здесь
+      audioUrl: `http://${localIP}:${port}/static/music/${track.filename}`,
+      artwork: track.artwork ? `http://${localIP}:${port}/static/img/${track.artwork}` : null
+    }));
+
+    console.log("Отправка очереди:", tracksQueue.length, "треков");
+    res.json(tracksQueue);
+  });
 });
 
 app.get('/users', (req, res) => {

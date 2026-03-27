@@ -178,16 +178,7 @@ export default function AlbumDetails() {
                       setCurrentArtist(Array.isArray(artist) ? artist[0] : artist || null);
                       setCurrentImage(imageUrlString);
 
-                      playQueue(queueUrls, 0, (queueIndex) => {
-                        const track = tracks[queueIndex];
-                        setCurrentTrack(track);
-                        setCurrentArtist(
-                          Array.isArray(artist) ? artist[0] : artist || null
-                        );
-                        setCurrentImage(imageUrlString);
-                      });
-
-                      setIsPlaying(true);
+                      playQueue(queueUrls, 0)
                     }
                   }}>
                   {/* Кнопка показывает ПАУЗУ только если играет трек из ЭТОГО альбома */}
@@ -201,31 +192,18 @@ export default function AlbumDetails() {
             </View>
           </View>
 
-          {tracks.map(item => (
+          {tracks.map((item, index) => (
             <TouchableOpacity
-            key={item.id}
-            onPress={() => {
-              const startIndex = tracks.findIndex(t => t.id === item.id);
+              key={item.id}
+              onPress={() => {
+                // ПРАВИЛЬНО: Передаем весь массив объектов и индекс начала
+                setCurrentTrack(item);
+                setCurrentArtist(Array.isArray(artist) ? artist[0] : artist || null);
+                setCurrentImage(imageUrlString);
 
-              const queueUrls = tracks
-                .slice(startIndex)
-                .map(t => t.audioUrl);
-
-              setCurrentTrack(item);
-              setCurrentArtist(Array.isArray(artist) ? artist[0] : artist || null);
-              setCurrentImage(imageUrlString);
-
-              playQueue(queueUrls, 0, (queueIndex) => {
-              const track = tracks[startIndex + queueIndex];
-
-              setCurrentTrack(track);
-              setCurrentArtist(
-                Array.isArray(artist) ? artist[0] : artist || null
-              );
-              setCurrentImage(imageUrlString);
-            });
-            }}>
-            <View key={item.id} style={[styles.trackItem, {backgroundColor: item.id === currentTrack?.id ? 'rgba(42, 42, 42, 0.4)' : 'transparent' }]}>
+                playQueue(tracks, index); // index — это позиция трека в массиве
+              }}>
+                      <View key={item.id} style={[styles.trackItem, {backgroundColor: item.id === currentTrack?.id ? 'rgba(42, 42, 42, 0.4)' : 'transparent' }]}>
               <View>
                 <Text 
                   style={[

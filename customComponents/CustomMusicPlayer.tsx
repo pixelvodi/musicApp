@@ -1,25 +1,44 @@
-import { getCurrentSound, playOrStop, setOnPlayStateChange } from '@/utils/playMusic';
+import { playOrStop } from '@/utils/playMusic';
 import { useTrack } from '@/utils/TrackContext';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import { Text } from '@react-navigation/elements';
-import { useLinkBuilder, useTheme } from '@react-navigation/native';
+import { useTheme } from '@react-navigation/native';
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, StyleSheet, TouchableOpacity, View } from 'react-native';
+import TrackPlayer, { State, usePlaybackState } from 'react-native-track-player';
+
+
 
 export default function MusicPlayer() {
   const { colors } = useTheme();
-  const { buildHref } = useLinkBuilder();
-  const { currentTrack } = useTrack();
-  const {currentArtist} = useTrack();
-  const { currentImage } = useTrack();
+  const { currentTrack, currentArtist, currentImage } = useTrack();
   const rotation = useRef(new Animated.Value(0)).current;
-  const [isPlaying, setIsPlaying] = useState(false);
-    const animationRef = useRef<Animated.CompositeAnimation | null>(null);
+  const animationRef = useRef<Animated.CompositeAnimation | null>(null);
 
+  // 1. Получаем состояние через официальный хук
+  const playbackState = usePlaybackState();
+  const [manualState, setManualState] = useState<State>(State.None);
+
+  // 2. Интервал для "принудительного" обновления (если хук тормозит)
   useEffect(() => {
-    if (isPlaying) {
-      // Запускаем бесконечное вращение
-      rotation.setValue(0);
+    const interval = setInterval(async () => {
+      const s = await TrackPlayer.getState();
+      if (s !== manualState) setManualState(s);
+    }, 500);
+    return () => clearInterval(interval);
+  }, [manualState]);
+
+  // 3. Определяем итоговый статус (играет или нет)
+  const currentState = (playbackState && typeof playbackState === 'object') 
+    ? playbackState.state 
+    : playbackState;
+
+  // Кнопка активна, если либо хук, либо ручной опрос говорят "Playing"
+  const isActuallyPlaying = currentState === State.Playing || manualState === State.Playing;
+
+  // 4. ОДИН useEffect для анимации
+  useEffect(() => {
+    if (isActuallyPlaying) {
       const spin = Animated.loop(
         Animated.timing(rotation, {
           toValue: 1,
@@ -31,59 +50,34 @@ export default function MusicPlayer() {
       spin.start();
       animationRef.current = spin;
     } else {
-      // Останавливаем анимацию
-      if (animationRef.current) {
-        animationRef.current.stop();
-        animationRef.current = null;
-      }
-      // Опционально: сбрасываем поворот
-      // rotation.setValue(0);
+      animationRef.current?.stop();
+      animationRef.current = null;
     }
+    return () => animationRef.current?.stop();
+  }, [isActuallyPlaying]);
 
-    // Cleanup при размонтировании
-    return () => {
-      if (animationRef.current) {
-        animationRef.current.stop();
-      }
-    };
-  }, [isPlaying]);
-
-  useEffect(() => {
-  const checkPlayback = async () => {
-    const sound = getCurrentSound();
-    if (sound) {
-      const status = await sound.getStatusAsync();
-      if (status.isLoaded) {
-        setIsPlaying(status.isPlaying);
-      }
-    }
-  };
-
-  // Проверяем каждые 500 мс (временно!)
-  // const interval = setInterval(checkPlayback, 500);
-  // return () => clearInterval(interval);
-}, []);
+  const [manualIsPlaying, setManualIsPlaying] = useState(false);
 
 useEffect(() => {
-  setOnPlayStateChange(setIsPlaying);
+  const interval = setInterval(async () => {
+    const s = await TrackPlayer.getState();
+    setManualIsPlaying(s === State.Playing);
+  }, 500); // Опрашиваем плеер 2 раза в секунду
+
+  return () => clearInterval(interval);
 }, []);
 
 
-  const buttonView = isPlaying
-    ? <FontAwesome5 name="play" size={30} color="white"/>
-    : <FontAwesome5 name="play" size={24} color="black" />
 
   const rotateInterpolate = rotation.interpolate({
     inputRange: [0, 1],
     outputRange: ['0deg', '360deg']
   });
 
-  
   return (
     <View style={styles.layout}>
       <View style={styles.darkLaouyt}>
         <View style={styles.vinylContainer}>
-          {/* Вращающаяся пластинка */}
           <Animated.Image 
             source={require('./images/pngPLastinka.png')}
             style={[
@@ -93,7 +87,6 @@ useEffect(() => {
             resizeMode="contain"
           />
           
-          {/* Центральное изображение (кремация) - НЕ анимированное */}
           {typeof currentImage === 'string' && (
               <Animated.Image 
                 source={{ uri: currentImage }}
@@ -101,7 +94,6 @@ useEffect(() => {
                 resizeMode="cover"
               />
           )}
-            
         </View>
       </View>
       
@@ -111,30 +103,21 @@ useEffect(() => {
       </View>
 
       <View style={styles.btn}>
-          <TouchableOpacity  onPress={async () => {
-            const result = await playOrStop(); // ← получаем результат напрямую
-            console.log("Результат", result);
-            if (result !== null) {
-              console.log("Результат", result.isPlaying)
-              setIsPlaying(result.isPlaying);
-            } 
-          }}>
-                {isPlaying ? (
-            <FontAwesome5 name="pause" size={30} color="white" />
-          ) : (
-            <FontAwesome5 name="play" size={30} color="white" />
-          )}
+        <TouchableOpacity onPress={async () => {
+          await playOrStop();
+        }}>
+          <FontAwesome5 
+            name={isActuallyPlaying ? "pause" : "play"} 
+            size={30} 
+            color="white" 
+          />
         </TouchableOpacity>
       </View>
     </View>
-    
-
   );
 };
-
 const styles = StyleSheet.create({
   layout: {
-    position: 'absolute',
     flexDirection: 'row',
     justifyContent: 'center',
     backgroundColor: '#fff',

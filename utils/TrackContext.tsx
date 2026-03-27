@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState } from "react";
 
 type Track = {
-  id: number;
+  id: string | number;
   title: string;
   album_id: number;
   name: string;

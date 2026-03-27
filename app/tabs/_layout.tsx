@@ -1,47 +1,48 @@
 import MusicPlayer from '@/customComponents/CustomMusicPlayer';
 import CustomNavBar from '@/customComponents/customNavBar';
+import { setupPlayer } from '@/utils/trackPlayerService';
 import { useFonts } from 'expo-font';
 import { Tabs } from 'expo-router';
-import React from 'react';
-import { SafeAreaView, StyleSheet, View } from 'react-native';
+import React, { useEffect } from 'react';
+import { StyleSheet, View } from 'react-native';
 
 export default function TabsLayout() {
   const [fontsLoaded] = useFonts({
     'MyFont': require('@/assets/fonts/Marmelad-Regular.ttf'),
   });
 
-  if (!fontsLoaded) {
-    return null;
-  }
+  useEffect(() => {
+    setupPlayer(); 
+  }, []);
+
+  if (!fontsLoaded) return null;
 
   return (
-    <View style={styles.container}>
-      <SafeAreaView style={styles.playerContainer}>
-        <MusicPlayer name={''} artist={''} />
-      </SafeAreaView>
+    <View style={{ flex: 1, backgroundColor: '#121212' }}>
+      {/* Плеер */}
+      <View style={styles.playerContainer}>
+        <MusicPlayer />
+      </View>
 
+      {/* Навигация */}
       <Tabs
         tabBar={(props) => <CustomNavBar {...props} />}
-        screenOptions={{
-          headerShown: false,
-        }}
-      />
+        screenOptions={{ headerShown: false }}
+      >
+        <Tabs.Screen name="home" options={{ title: 'Home' }} />
+        <Tabs.Screen name="search" options={{ title: 'Search' }} />
+        <Tabs.Screen name="library" options={{ title: 'Library' }} />
+      </Tabs>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#121212',
-  },
   playerContainer: {
     position: 'absolute',
-    bottom: 120,
+    bottom: 65, // Плеер над кнопками
     left: 0,
     right: 0,
-    zIndex: 1,
-    backgroundColor: 'transparent',
-    padding: 10,
+    zIndex: 99,
   },
 });

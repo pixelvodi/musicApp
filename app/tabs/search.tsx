@@ -92,7 +92,7 @@ export default function SearchScreen() {
                         console.log(`Pressed ${item.type}: ${item.title}`);
                         {isAlbum && (
                             router.push({
-                                pathname: '/tabs/albumDetails',
+                                pathname: './tabs/albumDetails',
                                 params: {
                                     id: item.id?.toString() ?? '',
                                     name: item.title,
@@ -129,27 +129,7 @@ export default function SearchScreen() {
                                 setCurrentImage(item.img ?? null);
                                 
                                 // 5. Запускаем плеер
-                                playQueue(queueUrls, 0, (queueIndex) => {
-                                    // ❌ БЫЛО: const track = tracks[startIndex + queueIndex]; 
-                                    // (tracks пустой в этом компоненте, поэтому было undefined)
-                                    
-                                    // ✅ СТАЛО: Берем трек из нашей локальной очереди queueItems
-                                    const nextTrackData = queueItems[queueIndex];
-                                    
-                                    if (nextTrackData) {
-                                        const nextTrackObject: Track = {
-                                            id: nextTrackData.id,
-                                            title: nextTrackData.title,
-                                            name: nextTrackData.title,
-                                            album_id: nextTrackData.album_id ?? 0,
-                                            audioUrl: nextTrackData.audioUrl ?? ''
-                                        };
-
-                                        setCurrentTrack(nextTrackObject);
-                                        setCurrentArtist(nextTrackData.artist ?? null);
-                                        setCurrentImage(nextTrackData.img ?? null);
-                                    }
-                                });
+                                playQueue(queueUrls, 0);
                             }
                         }
                     }}

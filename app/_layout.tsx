@@ -1,12 +1,9 @@
-import CustomNavBar from '@/customComponents/customNavBar';
 import { TrackProvider } from '@/utils/TrackContext';
 import { useFonts } from 'expo-font';
-import { Tabs } from 'expo-router';
-import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Stack } from 'expo-router';
 import Toast from 'react-native-toast-message';
 
-export default function AppLayout() {
+export default function RootLayout() {
   const [fontsLoaded] = useFonts({
     'MyFont': require('@/assets/fonts/Onest/Onest-Light.ttf'),
   });
@@ -14,25 +11,12 @@ export default function AppLayout() {
   if (!fontsLoaded) return null;
 
   return (
-    <TrackProvider>    {/* 👍 Контекст на всём приложении */}
-      <View style={styles.container}>
-        
-        <Tabs
-          tabBar={(props) => <CustomNavBar {...props} />}
-          screenOptions={{
-            headerShown: false,
-          }}
-        />
-
-        <Toast />
-      </View>
+    <TrackProvider>
+      <Stack screenOptions={{ headerShown: false }}>
+        {/* Это заставит Expo Router искать папку tabs и её layout */}
+        <Stack.Screen name="tabs" />
+      </Stack>
+      <Toast />
     </TrackProvider>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#121212',
-  },
-});
