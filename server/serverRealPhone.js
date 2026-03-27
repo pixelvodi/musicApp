@@ -263,7 +263,7 @@ app.post('/users/login', (req, res) => {
     }
 
     console.log("✅ Авторизация успешна:", email);
-    return res.json({ message: 'Авторизация успешна', userId: user.id });
+    return res.json({ message: 'Авторизация успешна', userId: user.user_id });
   });
 });
 
@@ -366,4 +366,49 @@ app.get('/search', async (req, res) => {
     console.error('Search error:', err);
     res.status(500).json({ error: err.message });
   }
+});
+
+// 1. Добавление трека в избранное
+app.post('/favorites/add', (req, res) => {
+  const { user_id, track_id } = req.body;
+  const added_at = new Date().toISOString();
+
+  if (!user_id || !track_id) {
+    return res.status(400).json({ error: 'user_id и track_id обязательны' });
+  }
+
+  // Используем INSERT OR IGNORE, чтобы не было дубликатов, если нажать дважды
+  const sql = `INSERT OR IGNORE INTO user_favorite_tracks (user_id, track_id, added_at) VALUES (?, ?, ?)`;
+  
+  db.run(sql, [user_id, track_id, added_at], function(err) {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ success: true, message: 'Обновлено в избранном' });
+  });
+});
+
+// 2. Получение списка избранного (для экрана Library)
+app.get('/favorites/:userId', (req, res) => {
+  const userId = req.params.userId;
+  const sql = `
+    SELECT t.*, ar.name AS artist, al.name AS album, al.img AS artwork
+    FROM tracks t
+    JOIN user_favorite_tracks f ON t.track_id = f.track_id
+    JOIN albums al ON t.album_id = al.album_id
+    JOIN artists ar ON al.artist_id = ar.artist_id
+    WHERE f.user_id = ?
+    ORDER BY f.added_at DESC
+  `;
+
+  db.all(sql, [userId], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    
+    const tracks = rows.map(track => ({
+      id: track.track_id,
+      title: track.title,
+      artist: track.artist,
+      audioUrl: `http://${localIP}:${port}/static/music/${track.filename}`,
+      artwork: track.artwork ? `http://${localIP}:${port}/static/img/${track.artwork}` : null
+    }));
+    res.json(tracks);
+  });
 });

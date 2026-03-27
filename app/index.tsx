@@ -8,7 +8,9 @@ export default function Index() {
   useEffect(() => {
     const checkUser = async () => {
       const email = await AsyncStorage.getItem('userEmail');
+      const userId = await AsyncStorage.getItem('userId');
       console.log("Checked user email:", email);
+      console.log("Checked user ID:", userId);
 
       if (email) {
         router.replace('/tabs/home'); // Пользователь зарегистрирован

@@ -6,12 +6,15 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Audio } from 'expo-av';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Animated,
+  Modal,
   Platform,
+  Pressable,
   SafeAreaView,
   ScrollView,
   StatusBar,
@@ -54,6 +57,10 @@ export default function AlbumDetails() {
   const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
 
+  const [menuVisible, setMenuVisible] = useState(false);
+  const [selectedTrack, setSelectedTrack] = useState<Track | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
  const checkVisible = (isVisible:boolean) => {
   if (isVisible) {
     setIsInView(isVisible)
@@ -89,6 +96,35 @@ export default function AlbumDetails() {
       });
     }
   }, [imageUrlString]);
+
+  useEffect(() => {
+  const loadId = async () => {
+    const id = await AsyncStorage.getItem('userId');
+    setCurrentUserId(id);
+  };
+  loadId();
+}, []);
+
+const addToFavorites = async (trackId: number) => {
+  if (!currentUserId) return;
+
+  try {
+    const response = await fetch(`http://192.168.1.2:3000/favorites/add`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        user_id: parseInt(currentUserId),
+        track_id: trackId,
+      }),
+    });
+    if (response.ok) {
+      console.log("Трек добавлен в базу");
+      setMenuVisible(false);
+    }
+  } catch (e) {
+    console.error("Ошибка сети", e);
+  }
+};
 
   useEffect(() => {
     const fetchTracks = async () => {
@@ -217,13 +253,44 @@ export default function AlbumDetails() {
                 </Text>
                 <Text style={styles.trackArtist}>{artist}</Text>
               </View>
-              <Entypo name="dots-three-vertical" size={15} color="white" />
+              <TouchableOpacity
+                onPress={() =>{
+                  setSelectedTrack(item);
+                  setMenuVisible(true);
+                }}
+              >
+                <Entypo name="dots-three-vertical" size={15} color="white" />
+              </TouchableOpacity>
             </View>
             </TouchableOpacity>
           ))}
         </ScrollView>
+
+        <Modal
+  transparent={true}
+  visible={menuVisible}
+  animationType="slide"
+  onRequestClose={() => setMenuVisible(false)}
+>
+  <Pressable style={styles.modalOverlay} onPress={() => setMenuVisible(false)}>
+    <View style={styles.bottomSheet}>
+      <View style={styles.dragHandle} />
+      <Text style={styles.menuTrackTitle}>{selectedTrack?.title}</Text>
+      
+      <TouchableOpacity 
+        style={styles.menuOption} 
+        onPress={() => selectedTrack && addToFavorites(selectedTrack.id)}
+      >
+        <Ionicons name="heart-outline" size={24} color="white" />
+        <Text style={styles.menuOptionText}>В любимые</Text>
+      </TouchableOpacity>
+    </View>
+  </Pressable>
+</Modal>
       </View>
     </SafeAreaView>
+
+    
   );
 }
 
@@ -361,5 +428,43 @@ const styles = StyleSheet.create({
     flex: 1,
     fontFamily: 'MyFont',
     paddingTop: 5
-  }
+  },
+  modalOverlay: {
+  flex: 1,
+  backgroundColor: 'rgba(0,0,0,0.6)',
+  justifyContent: 'flex-end',
+},
+bottomSheet: {
+  backgroundColor: '#1c1c1c',
+  borderTopLeftRadius: 25,
+  borderTopRightRadius: 25,
+  padding: 20,
+  paddingBottom: 40,
+},
+dragHandle: {
+  width: 40,
+  height: 4,
+  backgroundColor: '#444',
+  borderRadius: 2,
+  alignSelf: 'center',
+  marginBottom: 20,
+},
+menuTrackTitle: {
+  color: 'white',
+  fontSize: 18,
+  fontFamily: 'MyFont',
+  marginBottom: 25,
+  textAlign: 'center',
+},
+menuOption: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  paddingVertical: 15,
+},
+menuOptionText: {
+  color: 'white',
+  fontSize: 16,
+  marginLeft: 15,
+  fontFamily: 'MyFont',
+},
 });
