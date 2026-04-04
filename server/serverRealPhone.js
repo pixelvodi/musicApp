@@ -386,6 +386,25 @@ app.post('/favorites/add', (req, res) => {
   });
 });
 
+app.get('/favorites/check', (req, res) => {
+  const { user_id, track_id } = req.query;
+
+  const sql = `
+    SELECT 1 
+    FROM user_favorite_tracks 
+    WHERE user_id = ? AND track_id = ?
+    LIMIT 1
+  `;
+
+  db.get(sql, [user_id, track_id], (err, row) => {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+
+    res.json({ isFavorite: !!row });
+  });
+});
+
 // 2. Получение списка избранного (для экрана Library)
 app.get('/favorites/:userId', (req, res) => {
   const userId = req.params.userId;
@@ -410,5 +429,16 @@ app.get('/favorites/:userId', (req, res) => {
       artwork: track.artwork ? `http://${localIP}:${port}/static/img/${track.artwork}` : null
     }));
     res.json(tracks);
+  });
+});
+
+
+// Удаление из избранного
+app.post('/favorites/remove', (req, res) => {
+  const { user_id, track_id } = req.body;
+  db.run('DELETE FROM user_favorite_tracks WHERE user_id = ? AND track_id = ?', 
+    [user_id, track_id], function(err) {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json({ success: true, message: 'Удалено из избранного' });
   });
 });

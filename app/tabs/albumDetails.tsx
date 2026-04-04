@@ -50,9 +50,6 @@ export default function AlbumDetails() {
   const [dataLoaded, setDataLoaded] = useState(false);
 
   const [isInView, setIsInView] = useState(false);
-  // const {setCurrentTrack} = useTrack();
-  // const {setCurrentArtist} = useTrack();
-  // const {setCurrentImage} = useTrack();
   const { currentTrack, setCurrentTrack, setCurrentArtist, setCurrentImage } = useTrack();
   const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -60,17 +57,7 @@ export default function AlbumDetails() {
   const [menuVisible, setMenuVisible] = useState(false);
   const [selectedTrack, setSelectedTrack] = useState<Track | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-
- const checkVisible = (isVisible:boolean) => {
-  if (isVisible) {
-    setIsInView(isVisible)
-  } else {
-    setIsInView(isVisible)
-  }
- }
-
-
-
+  const [isFavorite, setIsFavorite] = useState(false);
 
   useEffect(() => {
     if (typeof imageUrlString === 'string') {
@@ -105,9 +92,58 @@ export default function AlbumDetails() {
   loadId();
 }, []);
 
+const openMenu = async (track: Track) => {
+  setSelectedTrack(track);
+  setMenuVisible(true); // <--- 1. Открываем модалку сразу, чтобы не было задержки
+
+  if (!currentUserId) {
+    console.log("ID пользователя не найден, проверка избранного пропущена");
+    setIsFavorite(false);
+    return;
+  }
+
+  try {
+    const url = `http://192.168.1.2:3000/favorites/check?user_id=${currentUserId}&track_id=${track.id}`;
+    console.log("Запрос к серверу:", url);
+
+    const response = await fetch(url);
+    const data = await response.json();
+    
+    // В консоли Metro теперь будет видно либо true, либо false
+    console.log("Результат проверки избранного:", data.isFavorite); 
+    setIsFavorite(data.isFavorite);
+    
+  } catch (e) {
+    console.error("Ошибка при проверке избранного:", e);
+    // В случае ошибки сбрасываем состояние, чтобы не вводить в заблуждение
+    setIsFavorite(false); 
+  }
+};
+
+const removeFromFavorites = async (trackId: number) => {
+  console.log("Попытка удаления трека ID:", trackId);
+  if (!currentUserId) return;
+  try {
+    const response = await fetch(`http://192.168.1.2:3000/favorites/remove`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        user_id: parseInt(currentUserId),
+        track_id: trackId,
+      }),
+    });
+    if (response.ok) {
+      setIsFavorite(false);
+      setMenuVisible(false);
+      console.log("крута")
+    }
+  } catch (e) {
+    console.error("Ошибка при удалении", e);
+  }
+};
+
 const addToFavorites = async (trackId: number) => {
   if (!currentUserId) return;
-
   try {
     const response = await fetch(`http://192.168.1.2:3000/favorites/add`, {
       method: 'POST',
@@ -119,7 +155,8 @@ const addToFavorites = async (trackId: number) => {
     });
     if (response.ok) {
       console.log("Трек добавлен в базу");
-      setMenuVisible(false);
+      setIsFavorite(true); // <-- ДОБАВЬ ЭТО, чтобы иконка закрасилась
+      setMenuVisible(false); // Или оставь true, если хочешь видеть результат
     }
   } catch (e) {
     console.error("Ошибка сети", e);
@@ -144,10 +181,6 @@ const addToFavorites = async (trackId: number) => {
     };
     fetchTracks();
   }, [id]);
-
-   
-
-
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: bgColor }]}>
       {/* Header */}
@@ -255,8 +288,7 @@ const addToFavorites = async (trackId: number) => {
               </View>
               <TouchableOpacity
                 onPress={() =>{
-                  setSelectedTrack(item);
-                  setMenuVisible(true);
+                  openMenu(item)
                 }}
               >
                 <Entypo name="dots-three-vertical" size={15} color="white" />
@@ -267,26 +299,38 @@ const addToFavorites = async (trackId: number) => {
         </ScrollView>
 
         <Modal
-  transparent={true}
-  visible={menuVisible}
-  animationType="slide"
-  onRequestClose={() => setMenuVisible(false)}
->
-  <Pressable style={styles.modalOverlay} onPress={() => setMenuVisible(false)}>
-    <View style={styles.bottomSheet}>
-      <View style={styles.dragHandle} />
-      <Text style={styles.menuTrackTitle}>{selectedTrack?.title}</Text>
-      
-      <TouchableOpacity 
-        style={styles.menuOption} 
-        onPress={() => selectedTrack && addToFavorites(selectedTrack.id)}
-      >
-        <Ionicons name="heart-outline" size={24} color="white" />
-        <Text style={styles.menuOptionText}>В любимые</Text>
-      </TouchableOpacity>
-    </View>
-  </Pressable>
-</Modal>
+          transparent={true}
+          visible={menuVisible}
+          animationType="slide"
+          onRequestClose={() => setMenuVisible(false)}
+        >
+          <Pressable style={styles.modalOverlay} onPress={() => setMenuVisible(false)}>
+            <View style={styles.bottomSheet}>
+              <View style={styles.dragHandle} />
+              <Text style={styles.menuTrackTitle}>{selectedTrack?.title}</Text>
+              
+              <TouchableOpacity 
+                style={styles.menuOption} 
+                onPress={() => {
+                  if (selectedTrack) {
+                    isFavorite 
+                      ? removeFromFavorites(selectedTrack.id) 
+                      : addToFavorites(selectedTrack.id);
+                  }
+                }}
+              >
+                <Ionicons 
+                  name={isFavorite ? "heart" : "heart-outline"} 
+                  size={24} 
+                  color={isFavorite ? "#ff766c" : "white"} 
+                />
+                <Text style={styles.menuOptionText}>
+                  {isFavorite ? "Удалить из любимых" : "В любимые"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </Pressable>
+        </Modal>
       </View>
     </SafeAreaView>
 
