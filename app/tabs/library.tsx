@@ -1,11 +1,11 @@
 import { useTrack } from '@/utils/TrackContext';
 import AntDesign from '@expo/vector-icons/AntDesign';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLocalSearchParams } from 'expo-router';
-import React from "react";
+import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Image, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { useLibraryLogic } from "../../utils/libraryLogic";
+import { FavoriteTrack, useLibraryLogic } from "../../utils/libraryLogic";
 import { playQueue } from "../../utils/playMusic";
-
 
 export default function Library() {
     const { favorites, loading, fetchFavorites } = useLibraryLogic();
@@ -13,12 +13,22 @@ export default function Library() {
     const params = useLocalSearchParams();
     const { id, name, imageUrl, artist } = params;
     const imageUrlString = Array.isArray(imageUrl) ? imageUrl[0] : imageUrl;
+    const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+    const [selectedTrack, setSelectedTrack] = useState<FavoriteTrack | null>(null);
 
     // Функция запуска проигрывания
     const handlePlayFavorites = async (index: number) => {
         console.log('Playing favorite track index:', index);
         await playQueue(favorites, index);
     };
+
+    useEffect(() => {
+  const loadId = async () => {
+    const id = await AsyncStorage.getItem('userId');
+    setCurrentUserId(id);
+  };
+  loadId();
+}, []);
 
     // Отрисовка одного трека (вынесена из return для чистоты)
     const renderTrack = ({ item, index }: { item: any; index: number }) => (
@@ -43,12 +53,33 @@ export default function Library() {
                 <Text style={styles.trackArtist} numberOfLines={1}>{item.artist}</Text>
             </View>
             
-            <TouchableOpacity onPress={() => { /* Логика удаления */ }}>
+            <TouchableOpacity onPress={() => { removeFromFavorites(item.id) }}>
                 <AntDesign name="heart" size={20} color="#be1a1a" />
             </TouchableOpacity>
         </TouchableOpacity>
     );
 
+    const removeFromFavorites = async (trackId: number) => {
+        console.log("Попытка удаления трека ID:", trackId);
+        if (!currentUserId) return;
+        try {
+            const response = await fetch(`http://192.168.1.2:3000/favorites/remove`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                user_id: parseInt(currentUserId),
+                track_id: trackId,
+            }),
+            });
+            if (response.ok) {
+            // setIsFavorite(false);
+            // setMenuVisible(false);
+            console.log("крута")
+            }
+        } catch (e) {
+            console.error("Ошибка при удалении", e);
+        }
+        };
     return (
         <View style={styles.container}>
             <Text style={styles.headerTitle}>Медиатека</Text>
