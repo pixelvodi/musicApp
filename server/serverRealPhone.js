@@ -461,6 +461,41 @@ app.get('/favoritesAlbum/check', (req, res) => {
   });
 });
 
+app.get('/favoritesAlbum/:userId', (req, res) => {
+  const userId = req.params.userId;
+  
+  // Выбираем данные альбома и имя артиста
+  const sql = `
+    SELECT 
+      al.album_id, 
+      al.name AS album_name, 
+      al.img AS artwork, 
+      ar.name AS artist_name
+    FROM albums al
+    JOIN user_favorite_albums f ON al.album_id = f.album_id
+    JOIN artists ar ON al.artist_id = ar.artist_id
+    WHERE f.user_id = ?
+    ORDER BY f.added_at DESC
+  `;
+
+  db.all(sql, [userId], (err, rows) => {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    
+    // Формируем чистый массив объектов для фронтенда
+    const albums = rows.map(album => ({
+      id: album.album_id,
+      name: album.album_name,
+      artist: album.artist_name,
+      // Собираем полную ссылку на обложку
+      imageUrl: album.artwork ? `http://${localIP}:${port}/static/img/${album.artwork}` : null
+    }));
+
+    res.json(albums);
+  });
+});
+
 app.post('/favoritesAlbum/add', (req, res) => {
   const { user_id, album_id } = req.body;
   const added_at = new Date().toISOString();

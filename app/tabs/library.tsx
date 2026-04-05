@@ -1,26 +1,39 @@
+import { useLibraryLikesTrackLogic } from '@/utils/libraryLikesTrackLogicc';
 import { useTrack } from '@/utils/TrackContext';
 import AntDesign from '@expo/vector-icons/AntDesign';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { FlatList, Image, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { FavoriteTrack, useLibraryLogic } from "../../utils/libraryLogic";
-import { playQueue } from "../../utils/playMusic";
 
 export default function Library() {
     const { favorites, loading, fetchFavorites } = useLibraryLogic();
+    const { favoritesTrack } = useLibraryLikesTrackLogic(); // Получаем избранные треки из нового хука
     const { currentTrack, setCurrentTrack, setCurrentArtist, setCurrentImage } = useTrack();
     const params = useLocalSearchParams();
     const { id, name, imageUrl, artist } = params;
     const imageUrlString = Array.isArray(imageUrl) ? imageUrl[0] : imageUrl;
     const [currentUserId, setCurrentUserId] = useState<string | null>(null);
     const [selectedTrack, setSelectedTrack] = useState<FavoriteTrack | null>(null);
+    const [favoriteAlbums, setFavoriteAlbums] = useState<any[]>([]);
 
-    // Функция запуска проигрывания
-    const handlePlayFavorites = async (index: number) => {
-        console.log('Playing favorite track index:', index);
-        await playQueue(favorites, index);
-    };
+    const fetchFavoriteAlbums = async () => {
+    if (!currentUserId) return;
+    try {
+        const response = await fetch(`http://192.168.1.2:3000/favoritesAlbum/${currentUserId}`);
+        const data = await response.json();
+        setFavoriteAlbums(data);
+    } catch (e) {
+        console.error("Ошибка загрузки альбомов", e);
+    }
+};
+
+useEffect(() => {
+    if (currentUserId) {
+        fetchFavoriteAlbums();
+    }
+}, [currentUserId]);
 
     useEffect(() => {
   const loadId = async () => {
@@ -31,39 +44,24 @@ export default function Library() {
 }, []);
 
     // Отрисовка одного трека (вынесена из return для чистоты)
-    const renderTrack = ({ item, index }: { item: any; index: number }) => (
-        <TouchableOpacity 
-            style={styles.trackItem} 
-            activeOpacity={0.7}
-            onPress={() => {handlePlayFavorites(index);
-                setCurrentTrack(item);
-                const artistName = Array.isArray(item.artist) ? item.artist[0] : item.artist || null;
-                setCurrentArtist(artistName);
-                setCurrentImage(item.artwork);} } 
-        >
-            {item.artwork ? (
-                <Image source={{ uri: item.artwork }} style={styles.trackImage} />
-            ) : (
-                <View style={[styles.trackImage, { backgroundColor: '#333', justifyContent: 'center', alignItems: 'center' }]}>
-                    <AntDesign name="picture" size={20} color="#666" />
-                </View>
-            )}
-            <View style={styles.trackInfo}>
-                <Text style={styles.trackTitle} numberOfLines={1}>{item.title}</Text>
-                <Text style={styles.trackArtist} numberOfLines={1}>{item.artist}</Text>
-            </View>
-            
-            <TouchableOpacity onPress={() => { removeFromFavorites(item.id) }}>
-                <AntDesign name="heart" size={20} color="#be1a1a" />
-            </TouchableOpacity>
-        </TouchableOpacity>
-    );
+    const renderAlbum = ({ item }: { item: any }) => (
+    <TouchableOpacity 
+        style={styles.albumCard}
+        onPress={() => router.push({
+            pathname: '/tabs/albumDetails',
+            params: { id: item.id, name: item.name, imageUrl: item.imageUrl, artist: item.artist }
+        })}
+    >
+        <Image source={{ uri: item.imageUrl }} style={styles.albumImage} />
+        <Text style={styles.albumName} numberOfLines={1}>{item.name}</Text>
+    </TouchableOpacity>
+);
 
     const removeFromFavorites = async (trackId: number) => {
         console.log("Попытка удаления трека ID:", trackId);
         if (!currentUserId) return;
         try {
-            const response = await fetch(`http://192.168.1.2:3000/favorites/remove`, {
+            const response = await fetch(`http://192.168.1.2:3000/favoritesAlbum/remove`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -82,45 +80,48 @@ export default function Library() {
         };
     return (
         <View style={styles.container}>
-            <Text style={styles.headerTitle}>Медиатека</Text>
-            <TouchableOpacity 
-                style={styles.likedHeroCard} 
-                onPress={() => router.push({pathname: '/tabs/libraryLikesTrack'})} // Нажатие на карточку запускает всё с первого трека
-            >
-                <View style={styles.gradientPlaceholder}>
-                    <AntDesign name="heart" size={30} color="white" />
-                </View>
-                <View style={{ marginLeft: 15 }}>
-                    <Text style={[styles.trackTitle, { fontSize: 18 }]}>Любимые треки</Text>
-                    <Text style={styles.trackArtist}>{favorites.length} аудиозаписей</Text>
-                </View>
-            </TouchableOpacity>
-            
+            <FlatList
+                // Теперь ГЛАВНЫЙ список — это АЛЬБОМЫ
+                data={favoriteAlbums}
+                keyExtractor={(item) => `album-${item.id}`}
+                renderItem={renderAlbum}
+                numColumns={2} // ВОТ ОНО: два в ряд
+                columnWrapperStyle={styles.albumRow} // Отступы между колонками
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={{ paddingBottom: 100 }}
 
-            {/* {loading ? (
-                <ActivityIndicator size="large" color="#fff" style={{ marginTop: 50 }} />
-            ) : (
-                <FlatList
-                    data={favorites}
-                    keyExtractor={(item) => item.id.toString()}
-                    renderItem={renderTrack}
-                    showsVerticalScrollIndicator={false}
-                    contentContainerStyle={{ paddingBottom: 150 }}
-                    refreshControl={
-                        <RefreshControl 
-                            refreshing={false} 
-                            onRefresh={fetchFavorites} 
-                            tintColor="#fff" 
-                        />
-                    }
-                    ListEmptyComponent={
-                        <View style={styles.emptyContainer}>
-                            <AntDesign name="plus-circle" size={50} color="#333" />
-                            <Text style={styles.emptyTxt}>Тут пока пусто</Text>
-                        </View>
-                    }
-                />
-            )} */}
+                // ВЕРХНЯЯ ЧАСТЬ (Заголовок и кнопка треков)
+                ListHeaderComponent={
+                    <View>
+                        <Text style={styles.headerTitle}>Медиатека</Text>
+                        
+                        <TouchableOpacity 
+                            style={styles.likedHeroCard} 
+                            onPress={() => router.push({pathname: '/tabs/libraryLikesTrack'})}
+                        >
+                            <View style={[styles.gradientPlaceholder, { backgroundColor: '#41B6E6' }]}>
+                                <AntDesign name="heart" size={30} color="white" />
+                            </View>
+                            <View style={{ marginLeft: 15 }}>
+                                <Text style={[styles.trackTitle, { fontSize: 18 }]}>Любимые треки</Text>
+                                <Text style={styles.trackArtist}>{favoritesTrack.length} аудиозаписей</Text>
+                            </View>
+                        </TouchableOpacity>
+
+                        <Text style={styles.sectionTitle}>Любимые альбомы</Text>
+                    </View>
+                }
+                
+                refreshControl={
+                    <RefreshControl refreshing={loading} onRefresh={fetchFavorites} tintColor="#fff" />
+                }
+                ListEmptyComponent={
+                    <View style={styles.emptyContainer}>
+                        <AntDesign name="plus-circle" size={50} color="#333" />
+                        <Text style={styles.emptyTxt}>Альбомов пока нет</Text>
+                    </View>
+                }
+            />
         </View>
     );
 }
@@ -186,5 +187,42 @@ const styles = StyleSheet.create({
         marginTop: 15,
         fontSize: 18,
         fontFamily: 'MyFont'
-    }
+    },
+    // Добавь это в StyleSheet.create
+    sectionTitle: {
+        fontFamily: 'MyFont',
+        fontSize: 20,
+        color: '#41B6E6', // Pantone Tech Light Blue
+        marginBottom: 15,
+    },
+    albumRow: {
+        justifyContent: 'space-between', // Расталкивает карточки по краям
+        paddingHorizontal: 5,
+    },
+    albumCard: {
+        width: '47%', // Чуть меньше половины, чтобы влез отступ
+        marginBottom: 20,
+        alignItems: 'center',
+    },
+    albumImage: {
+        width: '100%',
+        aspectRatio: 1, // Делает картинку квадратной автоматически
+        borderRadius: 12,
+        backgroundColor: '#333',
+    },
+    albumName: {
+        color: 'white',
+        fontFamily: 'MyFont',
+        fontSize: 14,
+        marginTop: 8,
+        textAlign: 'center',
+    },
+    // sectionTitle: {
+    //     fontFamily: 'MyFont',
+    //     fontSize: 22,
+    //     color: '#41B6E6', 
+    //     marginBottom: 20,
+    //     marginTop: 10
+    // },
+    
 });

@@ -11,11 +11,11 @@ export type FavoriteTrack = {
     artwork: string | null;
 };
 
-export const useLibraryLogic = () => {
-    const [favorites, setFavorites] = useState<FavoriteTrack[]>([]);
+export const useLibraryLikesTrackLogic = () => {
+    const [favoritesTrack, setFavoritesTrack] = useState<FavoriteTrack[]>([]);
     const [loading, setLoading] = useState(true);
 
-    const fetchFavorites = useCallback(async () => {
+    const fetchfavoritesTrack = useCallback(async () => {
         try {
             const userId = await AsyncStorage.getItem('userId');
             if (!userId) {
@@ -26,7 +26,7 @@ export const useLibraryLogic = () => {
 
             // Замени 192.168.1.2 на свой актуальный localIP, если он меняется
             const response = await axios.get(`http://192.168.1.2:3000/favorites/${userId}`);
-            setFavorites(response.data);
+            setFavoritesTrack(response.data);
         } catch (error) {
             console.error('Ошибка при загрузке избранного:', error);
         } finally {
@@ -35,8 +35,8 @@ export const useLibraryLogic = () => {
     }, []);
 
     useEffect(() => {
-        fetchFavorites();
-    }, [fetchFavorites]);
+        fetchfavoritesTrack();
+    }, [fetchfavoritesTrack]);
 
-    return { favorites, loading, fetchFavorites };
+    return { fetchfavoritesTrack, loading,  favoritesTrack };
 };

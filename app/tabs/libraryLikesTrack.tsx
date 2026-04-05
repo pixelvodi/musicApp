@@ -4,11 +4,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Image, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { FavoriteTrack, useLibraryLogic } from "../../utils/libraryLikesTrackLogicc";
+import { FavoriteTrack, useLibraryLikesTrackLogic } from "../../utils/libraryLikesTrackLogicc";
 import { playQueue } from "../../utils/playMusic";
 
 export default function Library() {
-    const { favorites, loading, fetchFavorites } = useLibraryLogic();
+    const { favoritesTrack, loading, fetchfavoritesTrack } = useLibraryLikesTrackLogic();
     const { currentTrack, setCurrentTrack, setCurrentArtist, setCurrentImage } = useTrack();
     const params = useLocalSearchParams();
     const { id, name, imageUrl, artist } = params;
@@ -19,7 +19,7 @@ export default function Library() {
     // Функция запуска проигрывания
     const handlePlayFavorites = async (index: number) => {
         console.log('Playing favorite track index:', index);
-        await playQueue(favorites, index);
+        await playQueue(favoritesTrack, index);
     };
 
     useEffect(() => {
@@ -88,7 +88,7 @@ export default function Library() {
                 <ActivityIndicator size="large" color="#fff" style={{ marginTop: 50 }} />
             ) : (
                 <FlatList
-                    data={favorites}
+                    data={favoritesTrack}
                     keyExtractor={(item) => item.id.toString()}
                     renderItem={renderTrack}
                     showsVerticalScrollIndicator={false}
@@ -96,7 +96,7 @@ export default function Library() {
                     refreshControl={
                         <RefreshControl 
                             refreshing={false} 
-                            onRefresh={fetchFavorites} 
+                            onRefresh={fetchfavoritesTrack} 
                             tintColor="#fff" 
                         />
                     }

@@ -293,7 +293,7 @@ const removeFromFavoritesAlbum = async (albumId: number) => {
                 onPress={async () => {
                   isFavoriteAlbum ? await removeFromFavoritesAlbum(Number(id)) : await addToFavoritesAlbum(Number(id));
                 }}>
-                <FontAwesome name={isFavoriteAlbum ? "heart" : "heart-o"} size={24} color="white" />
+                <FontAwesome name={isFavoriteAlbum ? "heart" : "heart-o"} size={24} color={isFavoriteAlbum ? "#0077C0" :"white"} />
               </TouchableOpacity>
               <MaterialCommunityIcons name="download-circle-outline" size={26} color="white" />
               <Ionicons name="person-outline" size={24} color="white" />
@@ -326,9 +326,9 @@ const removeFromFavoritesAlbum = async (albumId: number) => {
                   }}>
                   {/* Кнопка показывает ПАУЗУ только если играет трек из ЭТОГО альбома */}
                   {isPlaying && tracks.some(track => track.id === currentTrack?.id) ? (
-                    <FontAwesome name="pause-circle" size={75} color="#ff766c" />
+                    <FontAwesome name="pause-circle" size={75} color="#0077C0" />
                   ) : (
-                    <FontAwesome name="play-circle" size={75} color="#ff766c" />
+                    <FontAwesome name="play-circle" size={75} color="#0077C0" />
                   )}
                 </TouchableOpacity>
               )}
@@ -352,7 +352,7 @@ const removeFromFavoritesAlbum = async (albumId: number) => {
                   style={[
                     styles.trackTitle,
                     { 
-                      color: item.id === currentTrack?.id ? '#ff766c' : 'white',
+                      color: item.id === currentTrack?.id ? '#0077C0' : 'white',
                     }
                   ]}
                 >
