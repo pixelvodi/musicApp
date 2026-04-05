@@ -92,7 +92,7 @@ export default function SearchScreen() {
                         console.log(`Pressed ${item.type}: ${item.title}`);
                         {isAlbum && (
                             router.push({
-                                pathname: './tabs/albumDetails',
+                                pathname: '/tabs/albumDetails',
                                 params: {
                                     id: item.id?.toString() ?? '',
                                     name: item.title,
