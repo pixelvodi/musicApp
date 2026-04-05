@@ -1,10 +1,10 @@
 import { useTrack } from '@/utils/TrackContext';
 import AntDesign from '@expo/vector-icons/AntDesign';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { FavoriteTrack, useLibraryLogic } from "../../utils/libraryLogic";
+import { ActivityIndicator, FlatList, Image, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { FavoriteTrack, useLibraryLogic } from "../../utils/libraryLikesTrackLogicc";
 import { playQueue } from "../../utils/playMusic";
 
 export default function Library() {
@@ -82,22 +82,9 @@ export default function Library() {
         };
     return (
         <View style={styles.container}>
-            <Text style={styles.headerTitle}>Медиатека</Text>
-            <TouchableOpacity 
-                style={styles.likedHeroCard} 
-                onPress={() => router.push({pathname: '/tabs/libraryLikesTrack'})} // Нажатие на карточку запускает всё с первого трека
-            >
-                <View style={styles.gradientPlaceholder}>
-                    <AntDesign name="heart" size={30} color="white" />
-                </View>
-                <View style={{ marginLeft: 15 }}>
-                    <Text style={[styles.trackTitle, { fontSize: 18 }]}>Любимые треки</Text>
-                    <Text style={styles.trackArtist}>{favorites.length} аудиозаписей</Text>
-                </View>
-            </TouchableOpacity>
+            {/* <Text style={styles.headerTitle}>Медиатека</Text> */}
             
-
-            {/* {loading ? (
+            {loading ? (
                 <ActivityIndicator size="large" color="#fff" style={{ marginTop: 50 }} />
             ) : (
                 <FlatList
@@ -116,11 +103,11 @@ export default function Library() {
                     ListEmptyComponent={
                         <View style={styles.emptyContainer}>
                             <AntDesign name="plus-circle" size={50} color="#333" />
-                            <Text style={styles.emptyTxt}>Тут пока пусто</Text>
+                            <Text style={styles.emptyTxt}>bsdbdsbs</Text>
                         </View>
                     }
                 />
-            )} */}
+            )}
         </View>
     );
 }

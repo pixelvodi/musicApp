@@ -442,3 +442,47 @@ app.post('/favorites/remove', (req, res) => {
       res.json({ success: true, message: 'Удалено из избранного' });
   });
 });
+
+app.get('/favoritesAlbum/check', (req, res) => {
+  const { user_id, album_id } = req.query;
+
+  const sql = `
+    SELECT 1 
+    FROM user_favorite_albums 
+    WHERE user_id = ? AND album_id = ?
+    LIMIT 1
+  `;
+
+  db.get(sql, [user_id, album_id], (err, row) => {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    res.json({ isFavoriteAlbum: !!row });
+  });
+});
+
+app.post('/favoritesAlbum/add', (req, res) => {
+  const { user_id, album_id } = req.body;
+  const added_at = new Date().toISOString();
+
+  if (!user_id || !album_id) {
+    return res.status(400).json({ error: 'user_id и album_id обязательны' });
+  }
+
+  // Используем INSERT OR IGNORE, чтобы не было дубликатов, если нажать дважды
+  const sql = `INSERT OR IGNORE INTO user_favorite_albums (user_id, album_id, added_at) VALUES (?, ?, ?)`;
+  
+  db.run(sql, [user_id, album_id, added_at], function(err) {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ success: true, message: 'Альбом добавлен в избранное' });
+  });
+});
+
+app.post('/favoritesAlbum/remove', (req, res) => {
+  const { user_id, album_id } = req.body;
+  db.run('DELETE FROM user_favorite_albums WHERE user_id = ? AND album_id = ?', 
+    [user_id, album_id], function(err) {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json({ success: true, message: 'Удалено из избранного' });
+  });
+});

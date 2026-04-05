@@ -58,6 +58,7 @@ export default function AlbumDetails() {
   const [selectedTrack, setSelectedTrack] = useState<Track | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [isFavorite, setIsFavorite] = useState(false);
+  const [isFavoriteAlbum, setIsFavoriteAlbum] = useState(false);
 
   useEffect(() => {
     if (typeof imageUrlString === 'string') {
@@ -83,6 +84,33 @@ export default function AlbumDetails() {
       });
     }
   }, [imageUrlString]);
+
+ useEffect(() => {
+  const checkFavoriteStatus = async () => {
+    // 1. Ждем, пока currentUserId подтянется из AsyncStorage
+    if (!currentUserId || !id) return;
+    console.log("Проверяем статус избранного для альбома ID:", id, "и пользователя ID:", currentUserId);
+
+    try {
+      const url = `http://192.168.1.2:3000/favoritesAlbum/check?user_id=${currentUserId}&album_id=${id}`;
+      
+      const response = await fetch(url);
+      
+      // Проверяем, что сервер вернул именно JSON, а не HTML ошибку
+      const contentType = response.headers.get("content-type");
+      if (contentType && contentType.indexOf("application/json") !== -1) {
+        const data = await response.json();
+        setIsFavoriteAlbum(data.isFavoriteAlbum);
+      } else {
+        console.warn("Сервер вернул не JSON. Возможно, 404 или 500 ошибка.");
+      }
+    } catch (e) {
+      console.error("Ошибка при проверке статуса альбома:", e);
+    }
+  };
+
+  checkFavoriteStatus();
+}, [currentUserId, id]); // Эффект сработает сразу, как только появится currentUserId
 
   useEffect(() => {
   const loadId = async () => {
@@ -163,6 +191,47 @@ const addToFavorites = async (trackId: number) => {
   }
 };
 
+const addToFavoritesAlbum = async (albumId: number) => {
+  console.log("Попытка добавить альбом ID:", albumId);
+  if (!currentUserId) return;
+  try {
+    const response = await fetch(`http://192.168.1.2:3000/favoritesAlbum/add`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        user_id: parseInt(currentUserId),
+        album_id: albumId,
+      }),
+    });
+    if (response.ok) {
+      console.log("Альбом добавлен в избранное");
+      setIsFavoriteAlbum(true); // <-- ДОБАВЬ ЭТО, чтобы иконка закрасилась
+    }
+  } catch (e) {
+    console.error("Ошибка сети", e);
+  }
+};
+
+const removeFromFavoritesAlbum = async (albumId: number) => {
+  console.log("Попытка удаления альбома ID:", albumId);
+  if (!currentUserId) return;
+  try {
+    const response = await fetch(`http://192.168.1.2:3000/favoritesAlbum/remove`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        user_id: parseInt(currentUserId),
+        album_id: albumId,
+      }),
+    });
+    if (response.ok) {
+      setIsFavoriteAlbum(false);
+      console.log("крута")
+    }
+  } catch (e) {
+    console.error("Ошибка при удалении", e);
+  }
+};
   useEffect(() => {
     const fetchTracks = async () => {
       try {
@@ -220,7 +289,12 @@ const addToFavorites = async (trackId: number) => {
 
           <View style={styles.managment}>
             <View style={styles.leftManagment}>
-              <FontAwesome name="heart-o" size={24} color="white" />
+              <TouchableOpacity
+                onPress={async () => {
+                  isFavoriteAlbum ? await removeFromFavoritesAlbum(Number(id)) : await addToFavoritesAlbum(Number(id));
+                }}>
+                <FontAwesome name={isFavoriteAlbum ? "heart" : "heart-o"} size={24} color="white" />
+              </TouchableOpacity>
               <MaterialCommunityIcons name="download-circle-outline" size={26} color="white" />
               <Ionicons name="person-outline" size={24} color="white" />
             </View>
