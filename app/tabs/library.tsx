@@ -1,11 +1,23 @@
+import { getDominantColor } from '@/utils/imgBackground';
 import { useLibraryLikesTrackLogic } from '@/utils/libraryLikesTrackLogicc';
 import { useTrack } from '@/utils/TrackContext';
 import AntDesign from '@expo/vector-icons/AntDesign';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import axios from 'axios';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { FlatList, Image, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { FavoriteTrack, useLibraryLogic } from "../../utils/libraryLogic";
+import { responsive } from "../../utils/responsive";
+
+export type Album = {
+  id: number;
+  name: string;
+  imageUrl: string;
+  artist: string;
+  img_artist: string;
+  track_count: number;
+};
 
 export default function Library() {
     const { favorites, loading, fetchFavorites } = useLibraryLogic();
@@ -17,6 +29,14 @@ export default function Library() {
     const [currentUserId, setCurrentUserId] = useState<string | null>(null);
     const [selectedTrack, setSelectedTrack] = useState<FavoriteTrack | null>(null);
     const [favoriteAlbums, setFavoriteAlbums] = useState<any[]>([]);
+    const [albums, setAlbums] = useState<Album[]>([]);
+    const [albumColors, setAlbumColors] = useState<{ [key: number]: string }>({});
+
+    useEffect(() => {
+        axios.get<Album[]>('http://192.168.1.2:3000/albums')
+        .then(res => setAlbums(res.data))
+        .catch(err => console.error('Error fetching albums:', err));
+    }, []);
 
     const fetchFavoriteAlbums = async () => {
     if (!currentUserId) return;
@@ -35,6 +55,28 @@ useEffect(() => {
     }
 }, [currentUserId]);
 
+useEffect(() => {
+    if (favoriteAlbums.length === 0) return;
+
+    const fetchColors = async () => {
+      const colorsMap: { [key: number]: string } = {};
+      for (const album of favoriteAlbums) {
+        if (album.imageUrl) {
+          try {
+            const color = await getDominantColor(album.imageUrl);
+            colorsMap[album.id] = color;
+            console.log(`Цвет для альбома ${album.name} (ID: ${album.id}): ${color}`);
+          } catch {
+            colorsMap[album.id] = '#121212';
+          }
+        }
+      }
+      setAlbumColors(colorsMap);
+    };
+
+    fetchColors();
+  }, [favoriteAlbums]);
+
     useEffect(() => {
   const loadId = async () => {
     const id = await AsyncStorage.getItem('userId');
@@ -45,39 +87,52 @@ useEffect(() => {
 
     // Отрисовка одного трека (вынесена из return для чистоты)
     const renderAlbum = ({ item }: { item: any }) => (
+        console.log("Рендер альбома ID:", item.id), // Лог для проверки данных
     <TouchableOpacity 
-        style={styles.albumCard}
+        style={[styles.albumCard, { backgroundColor: albumColors[item.id] ?? '#121212' }]}
         onPress={() => router.push({
             pathname: '/tabs/albumDetails',
             params: { id: item.id, name: item.name, imageUrl: item.imageUrl, artist: item.artist }
         })}
     >
-        <Image source={{ uri: item.imageUrl }} style={styles.albumImage} />
+        <View style={styles.darkLaouyt}/>
+                        <View style={styles.vinylContainerHorizontal}>
+                          <Image
+                            source={require('@/customComponents/images/pngPLastinka.png')}
+                            style={styles.vinylHorizontal}
+                          />
+                            <Image
+                              source={{ uri: item.imageUrl }}
+                              style={styles.centerImageHorizontal}
+                              resizeMode="contain"
+                            />
+                        </View>
         <Text style={styles.albumName} numberOfLines={1}>{item.name}</Text>
     </TouchableOpacity>
+
 );
 
-    const removeFromFavorites = async (trackId: number) => {
-        console.log("Попытка удаления трека ID:", trackId);
-        if (!currentUserId) return;
-        try {
-            const response = await fetch(`http://192.168.1.2:3000/favoritesAlbum/remove`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                user_id: parseInt(currentUserId),
-                track_id: trackId,
-            }),
-            });
-            if (response.ok) {
-            // setIsFavorite(false);
-            // setMenuVisible(false);
-            console.log("крута")
-            }
-        } catch (e) {
-            console.error("Ошибка при удалении", e);
-        }
-        };
+    // const removeFromFavorites = async (trackId: number) => {
+    //     console.log("Попытка удаления трека ID:", trackId);
+    //     if (!currentUserId) return;
+    //     try {
+    //         const response = await fetch(`http://192.168.1.2:3000/favoritesAlbum/remove`, {
+    //         method: 'POST',
+    //         headers: { 'Content-Type': 'application/json' },
+    //         body: JSON.stringify({
+    //             user_id: parseInt(currentUserId),
+    //             track_id: trackId,
+    //         }),
+    //         });
+    //         if (response.ok) {
+    //         // setIsFavorite(false);
+    //         // setMenuVisible(false);
+    //         console.log("крута")
+    //         }
+    //     } catch (e) {
+    //         console.error("Ошибка при удалении", e);
+    //     }
+    //     };
     return (
         <View style={styles.container}>
             <FlatList
@@ -99,16 +154,21 @@ useEffect(() => {
                             style={styles.likedHeroCard} 
                             onPress={() => router.push({pathname: '/tabs/libraryLikesTrack'})}
                         >
-                            <View style={[styles.gradientPlaceholder, { backgroundColor: '#41B6E6' }]}>
-                                <AntDesign name="heart" size={30} color="white" />
-                            </View>
-                            <View style={{ marginLeft: 15 }}>
-                                <Text style={[styles.trackTitle, { fontSize: 18 }]}>Любимые треки</Text>
-                                <Text style={styles.trackArtist}>{favoritesTrack.length} аудиозаписей</Text>
+                            <View style={styles.gradientPlaceholder}>
+        
+                                {/* Большая иконка сердца (центрирована) */}
+                                <AntDesign name="heart" size={100} color="white" style={styles.heartIconBackground} />
+                                
+                                {/* Текстовый блок (позиционирован абсолютно вниз) */}
+                                <View style={styles.trackInfoOnBanner}>
+                                    <Text style={[styles.trackTitle, { fontSize: 22, textShadowColor: 'black', textShadowRadius: 3 }]}>Любимые треки</Text>
+                                    <Text style={[styles.trackArtist, { color: '#ccc', textShadowColor: 'black', textShadowRadius: 2 }]}>{favoritesTrack.length} аудиозаписей</Text>
+                                </View>
+
                             </View>
                         </TouchableOpacity>
 
-                        <Text style={styles.sectionTitle}>Любимые альбомы</Text>
+                        
                     </View>
                 }
                 
@@ -140,32 +200,33 @@ const styles = StyleSheet.create({
         marginBottom: 20
     },
     likedHeroCard: {
-        flexDirection: 'row',
-        alignItems: 'center',
+        // Убираем flexDirection: 'row', так как элементы накладываются
+        width: '100%',
         marginBottom: 30,
+        borderRadius: 12, // Углы теперь на родителе
+        overflow: 'hidden', // Чтобы иконка не вылезала
     },
     gradientPlaceholder: {
-        width: 60,
-        height: 60,
-        borderRadius: 8,
-        backgroundColor: '#6b1fb3',
-        justifyContent: 'center',
-        alignItems: 'center'
-    },
-    trackItem: {
-        flexDirection: 'row',
+        width: '100%',
+        height: 180, // Чуть увеличим высоту для баннера
+        backgroundColor: '#0077C0',
+        // justify/align тут нужны для центрирования большой иконки
+        justifyContent: 'center', 
         alignItems: 'center',
-        marginBottom: 15,
+        // Обязательно: ставим position relative для родителя абсолютно позиционированных детей
+        position: 'relative', 
     },
-    trackImage: {
-        width: 55,
-        height: 55,
-        borderRadius: 4
+    heartIconBackground: {
+        // Большая иконка, которая будет "фоном"
+        // right={90} убираем, он тут не нужен
+        opacity: 0.15, // Сделаем её еле заметной, как водяной знак
     },
-    trackInfo: {
-        flex: 1,
-        marginLeft: 15,
-        justifyContent: 'center'
+    trackInfoOnBanner: {
+        // ВОТ РЕШЕНИЕ:
+        position: 'absolute', // Вырываем из потока
+        bottom: 15, // Прижимаем к низу баннера
+        left: 15,   // Отступ слева
+        zIndex: 3,  // Гарантированно поверх иконки
     },
     trackTitle: {
         color: 'white',
@@ -174,7 +235,7 @@ const styles = StyleSheet.create({
         marginBottom: 4
     },
     trackArtist: {
-        color: '#aaaaaa',
+        color: '#ffffff',
         fontSize: 13,
         fontFamily: 'MyFont'
     },
@@ -200,9 +261,14 @@ const styles = StyleSheet.create({
         paddingHorizontal: 5,
     },
     albumCard: {
-        width: '47%', // Чуть меньше половины, чтобы влез отступ
-        marginBottom: 20,
-        alignItems: 'center',
+         width: responsive.number(165),
+            height: 165,
+            backgroundColor: '#FFFFFF',
+            borderRadius: 10,
+            marginRight: 10,
+            marginBottom: 5,
+            overflow: 'hidden',
+            position: 'relative'
     },
     albumImage: {
         width: '100%',
@@ -211,18 +277,72 @@ const styles = StyleSheet.create({
         backgroundColor: '#333',
     },
     albumName: {
-        color: 'white',
-        fontFamily: 'MyFont',
-        fontSize: 14,
-        marginTop: 8,
-        textAlign: 'center',
+    position: 'absolute',
+    top: 125,
+    left: 5,
+    color: '#fff',
+    zIndex: 4,
+    fontFamily: 'MyFont',
+    fontSize: 20
     },
-    // sectionTitle: {
-    //     fontFamily: 'MyFont',
-    //     fontSize: 22,
-    //     color: '#41B6E6', 
-    //     marginBottom: 20,
-    //     marginTop: 10
-    // },
+    darkLaouyt: {
+    backgroundColor: "#000",
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    borderRadius: 10,
+    padding: 12,
+    opacity: 0.7,
+    zIndex: 2
+  },
+  vinylContainer: {
+    position: "absolute",
+    width: 190,
+    height: 190,
+    top: -60,
+    left: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1,
+    overflow: 'hidden'
+  },
+  vinyl: {
+    width: '100%',
+    height: '100%',
+    position: 'absolute',
+    left: 50,
+    
+  },
+   centerImage: {
+    width: 60, // Размер центрального изображения
+    height: 60,
+    left: 50,
+    borderRadius: 40, // Круглая форма
+  },
+  vinylContainerHorizontal: {
+    position: "absolute",
+    width: 220,
+    height: 220,
+    top: -30,
+    left: -15,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1,
+    overflow: 'hidden'
+  },
+  vinylHorizontal: {
+    width: '100%',
+    height: '100%',
+    position: 'absolute',
+    left: 50,
+  },
+  centerImageHorizontal: {
+    width: 80, // Размер центрального изображения
+    height: 80,
+    left: 50,
+    borderRadius: 50, // Круглая форма
+  },
     
 });
