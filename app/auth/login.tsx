@@ -57,9 +57,12 @@ export default function Login() {
         password
       });
 
-      await AsyncStorage.setItem('userEmail', email);
-      router.push('/tabs/home');
+      if (response.data && response.data.userId) {
+        await AsyncStorage.setItem('userId', String(response.data.userId.toString()));
 
+        await AsyncStorage.setItem('userEmail', email);
+        router.push('/tabs/home');
+      }
       console.log("Norm", response.data)
     }
     // Здесь будет логика отправки данных на сервер

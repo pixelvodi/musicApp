@@ -2,8 +2,8 @@ import AntDesign from '@expo/vector-icons/AntDesign';
 import { router } from 'expo-router';
 import React from 'react';
 import { Animated, Image, ScrollView, StatusBar, Text, TouchableOpacity, View } from 'react-native';
-import { useHomeLogic } from '../../android/src/logic/logicHome';
-import { styles } from '../../android/src/styles/stylesHome';
+import { useHomeLogic } from '../../../utils/logicHome';
+import { styles } from '../../../utils/stylesHome';
 
 export default function Home() {
   const { albums, albumHowAboutListen, albumColors, clearReg, artist } = useHomeLogic();
@@ -34,7 +34,7 @@ export default function Home() {
                   key={album.id ?? index}
                   style={[itemStyle, {backgroundColor: albumColors[album.id] ?? '#121212'}]}
                   onPress={() => router.push({
-                    pathname: '/tabs/albumDetails',
+                    pathname: '/tabs/home/albumDetails',
                     params: {
                       id: album.id?.toString() ?? '',
                       name: album.name,
@@ -71,7 +71,7 @@ export default function Home() {
             return (
               <TouchableOpacity key={album.id ?? index} style = {styles.howAboutListenSecond}
                 onPress={() => router.push({
-                    pathname: '/tabs/albumDetails',
+                    pathname: '/tabs/home/albumDetails',
                     params: {
                       id: album.id?.toString() ?? '',
                       name: album.name,
@@ -150,7 +150,7 @@ export default function Home() {
                   key={album.id ?? index}
                   style={[itemStyle, {backgroundColor: albumColors[album.id] ?? '#121212'}]}
                   onPress={() => router.push({
-                    pathname: '/tabs/albumDetails',
+                    pathname: '/tabs/home/albumDetails',
                     params: {
                       id: album.id?.toString() ?? '',
                       name: album.name,

@@ -24,8 +24,18 @@ export const useHomeLogic = () => {
   const [albumHowAboutListen, setAlbumHowAboutlisten] = useState<Album[]>([]);
   const [artist, setArtist] = useState<Artist[]>([]);
   const [albumColors, setAlbumColors] = useState<{ [key: number]: string }>({});
+  const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
+    const checkUser = async () => {
+      const id = await AsyncStorage.getItem('userId');
+      const email = await AsyncStorage.getItem('userEmail');
+      setUserId(id);
+      console.log(`На главной. Пользователь: ${email} (ID: ${id})`);
+    };
+
+    checkUser();
+
     axios.get<Album[]>('http://192.168.1.2:3000/albums')
       .then(res => setAlbums(res.data))
       .catch(err => console.error('Error fetching albums:', err));
