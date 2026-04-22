@@ -7,8 +7,8 @@ import axios from 'axios';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { FlatList, Image, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { FavoriteTrack, useLibraryLogic } from "../../utils/libraryLogic";
-import { responsive } from "../../utils/responsive";
+import { FavoriteTrack, useLibraryLogic } from "../../../utils/libraryLogic";
+import { responsive } from "../../../utils/responsive";
 
 export type Album = {
   id: number;
@@ -91,7 +91,7 @@ useEffect(() => {
     <TouchableOpacity 
         style={[styles.albumCard, { backgroundColor: albumColors[item.id] ?? '#121212' }]}
         onPress={() => router.push({
-            pathname: '/tabs/albumDetails',
+            pathname: '/tabs/library/albumDetails',
             params: { id: item.id, name: item.name, imageUrl: item.imageUrl, artist: item.artist }
         })}
     >
@@ -152,7 +152,7 @@ useEffect(() => {
                         
                         <TouchableOpacity 
                             style={styles.likedHeroCard} 
-                            onPress={() => router.push({pathname: '/tabs/libraryLikesTrack'})}
+                            onPress={() => router.push({pathname: '/tabs/library/libraryLikesTrack'})}
                         >
                             <View style={styles.gradientPlaceholder}>
         

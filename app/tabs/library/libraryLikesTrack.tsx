@@ -4,8 +4,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Image, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { FavoriteTrack, useLibraryLikesTrackLogic } from "../../utils/libraryLikesTrackLogicc";
-import { playQueue } from "../../utils/playMusic";
+import { FavoriteTrack, useLibraryLikesTrackLogic } from "../../../utils/libraryLikesTrackLogicc";
+import { playQueue } from "../../../utils/playMusic";
 
 export default function Library() {
     const { favoritesTrack, loading, fetchfavoritesTrack } = useLibraryLikesTrackLogic();
