@@ -39,7 +39,7 @@ export const styles = StyleSheet.create({
   },
   recentlyListened: {
     width: '100%',
-    height: responsive.number(150),
+    height: responsive.number(170),
     backgroundColor: 'transparent',
     borderColor: 'transparent',
     borderRadius: 10,
@@ -50,11 +50,12 @@ export const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    paddingHorizontal: 2
+    paddingHorizontal: 2,
+    justifyContent: 'space-between',
   },
 
   recentlyListened1: {
-    width: responsive.number(170),
+    width: '48%',
     height: 70,
     backgroundColor: '#FFFFFF',
     borderRadius: 10,
@@ -72,7 +73,7 @@ export const styles = StyleSheet.create({
     fontFamily: 'MyFont'
   },
   recentlyListened2: {
-    width: responsive.number(170),
+    width: '48%',
     height: 70,
     backgroundColor: '#be1a1aff',
     borderRadius: 10,
@@ -80,7 +81,7 @@ export const styles = StyleSheet.create({
     position: 'relative'
   },
   recentlyListened3: {
-    width: responsive.number(170),
+    width: '48%',
     height: 70,
     backgroundColor: '#ffe0e0ff',
     borderRadius: 10,
@@ -89,7 +90,7 @@ export const styles = StyleSheet.create({
     position: 'relative'
   },
   recentlyListened4: {
-    width: responsive.number(170),
+    width: '48%',
     height: 70,
     backgroundColor: '#ffffffff',
     borderRadius: 10,
