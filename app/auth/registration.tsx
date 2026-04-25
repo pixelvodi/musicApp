@@ -61,12 +61,13 @@ export default function Registration() {
     return;
     }
     try {
-      const response = await axios.post(`http://192.168.1.7:3000/users/register`, {
+      const response = await axios.post(`http://192.168.1.2:3000/users/register`, {
         email,
         password
       });
 
       await AsyncStorage.setItem('userEmail', email);
+      await AsyncStorage.setItem('userId', String(response.data.userId));
       router.push('/tabs/home');
 
       console.log("Norm", response.data)

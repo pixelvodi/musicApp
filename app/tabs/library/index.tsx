@@ -42,7 +42,9 @@ export default function Library() {
     if (!currentUserId) return;
     try {
         const response = await fetch(`http://192.168.1.2:3000/favoritesAlbum/${currentUserId}`);
+        console.log(`Запрос на избранные альбомы для пользователя ${currentUserId} отправлен.`);
         const data = await response.json();
+        console.log("DATA FROM SERVER:", data)
         setFavoriteAlbums(data);
     } catch (e) {
         console.error("Ошибка загрузки альбомов", e);
@@ -111,28 +113,6 @@ useEffect(() => {
     </TouchableOpacity>
 
 );
-
-    // const removeFromFavorites = async (trackId: number) => {
-    //     console.log("Попытка удаления трека ID:", trackId);
-    //     if (!currentUserId) return;
-    //     try {
-    //         const response = await fetch(`http://192.168.1.2:3000/favoritesAlbum/remove`, {
-    //         method: 'POST',
-    //         headers: { 'Content-Type': 'application/json' },
-    //         body: JSON.stringify({
-    //             user_id: parseInt(currentUserId),
-    //             track_id: trackId,
-    //         }),
-    //         });
-    //         if (response.ok) {
-    //         // setIsFavorite(false);
-    //         // setMenuVisible(false);
-    //         console.log("крута")
-    //         }
-    //     } catch (e) {
-    //         console.error("Ошибка при удалении", e);
-    //     }
-    //     };
     return (
         <View style={styles.container}>
             <FlatList
