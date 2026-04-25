@@ -1,12 +1,29 @@
-import TrackPlayer, { Event } from 'react-native-track-player';
+import TrackPlayer, { AppKilledPlaybackBehavior, Capability, Event } from 'react-native-track-player';
 
 export async function setupPlayer() {
   try {
-    await TrackPlayer.getState();
+    // Пробуем инициализировать плеер
+    await TrackPlayer.setupPlayer({});
   } catch (e) {
-    await TrackPlayer.setupPlayer();
-    
+    // Если уже инициализирован — отлично, идем дальше
   }
+
+  // ВАЖНО: updateOptions должен быть ВНЕ блока catch, 
+  // чтобы он обновлялся при каждом запуске приложения
+  await TrackPlayer.updateOptions({
+    capabilities: [
+      Capability.Play,
+      Capability.Pause,
+      Capability.SkipToNext,
+      Capability.SkipToPrevious,
+      Capability.Stop,
+      Capability.SeekTo,
+    ],
+    // Добавь это для Android
+    android: {
+      appKilledPlaybackBehavior: AppKilledPlaybackBehavior.StopPlaybackAndRemoveNotification,
+    }
+  });
 }
 
 export const PlaybackService = async function() {
