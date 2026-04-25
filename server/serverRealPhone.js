@@ -465,7 +465,8 @@ app.get('/favoritesAlbum/check', (req, res) => {
 });
 
 app.get('/favoritesAlbum/:userId', (req, res) => {
-  const userId = req.params.userId;
+  const userId = parseInt(req.params.userId); // Превращаем "1" в 1
+  console.log("Получение избранных альбомов для user_id:", userId);
   
   // Выбираем данные альбома и имя артиста
   const sql = `
