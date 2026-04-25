@@ -69,9 +69,9 @@ export const useHomeLogic = () => {
   }, [albums]);
 
   const clearReg = async () => {
-    await AsyncStorage.removeItem('userEmail');
-    router.replace('/auth/registration');
-  };
+  await AsyncStorage.multiRemove(['userEmail', 'userId']); // Чистим оба ключа
+  router.replace('/auth/registration');
+};
 
   useEffect(() => {
     axios.get<Artist[]>('http://192.168.1.2:3000/artist')
