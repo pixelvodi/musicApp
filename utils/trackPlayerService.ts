@@ -1,29 +1,34 @@
-import TrackPlayer, { Capability, Event } from 'react-native-track-player';
+import TrackPlayer, { Event } from 'react-native-track-player';
 
 export async function setupPlayer() {
   try {
-    // Пытаемся получить текущее состояние, чтобы не инициализировать дважды
     await TrackPlayer.getState();
   } catch (e) {
-    // Если ошибка — значит плеер не настроен, настраиваем:
     await TrackPlayer.setupPlayer();
-    await TrackPlayer.updateOptions({
-      capabilities: [
-        Capability.Play,
-        Capability.Pause,
-        Capability.SkipToNext,
-        Capability.SkipToPrevious,
-        Capability.Stop,
-      ],
-      compactCapabilities: [Capability.Play, Capability.Pause],
-    });
+    
   }
 }
 
-// Эта функция обязательна, даже если она пустая
-export async function PlaybackService() {
-  TrackPlayer.addEventListener(Event.RemotePause, () => TrackPlayer.pause());
-  TrackPlayer.addEventListener(Event.RemotePlay, () => TrackPlayer.play());
-  TrackPlayer.addEventListener(Event.RemoteNext, () => TrackPlayer.skipToNext());
-  TrackPlayer.addEventListener(Event.RemotePrevious, () => TrackPlayer.skipToPrevious());
-}
+export const PlaybackService = async function() {
+    console.log('--- [BACKEND] СЕРВИС ЗАПУЩЕН И СЛУШАЕТ ---');
+
+    TrackPlayer.addEventListener(Event.RemotePlay, () => {
+        console.log('--- [СИГНАЛ] ЖМУ PLAY ---');
+        TrackPlayer.play();
+    });
+
+    TrackPlayer.addEventListener(Event.RemotePause, () => {
+        console.log('--- [СИГНАЛ] ЖМУ PAUSE ---');
+        TrackPlayer.pause();
+    });
+
+    TrackPlayer.addEventListener(Event.RemoteNext, () => {
+        console.log('--- [СИГНАЛ] ЖМУ NEXT ---');
+        TrackPlayer.skipToNext();
+    });
+
+    TrackPlayer.addEventListener(Event.RemotePrevious, () => {
+        console.log('--- [СИГНАЛ] ЖМУ PREVIOUS ---');
+        TrackPlayer.skipToPrevious();
+    });
+};
