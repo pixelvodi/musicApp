@@ -5,9 +5,11 @@ import { Text } from '@react-navigation/elements';
 import { useTheme } from '@react-navigation/native';
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, StyleSheet, TouchableOpacity, View } from 'react-native';
-import TrackPlayer, { State, usePlaybackState } from 'react-native-track-player';
+import * as TrackPlayerModule from 'react-native-track-player';
+import { State, usePlaybackState } from 'react-native-track-player';
 
-
+// Создаем типизированную обертку, чтобы TS замолчал
+const TrackPlayer = TrackPlayerModule as any;
 
 export default function MusicPlayer() {
   const { colors } = useTheme();
@@ -15,28 +17,34 @@ export default function MusicPlayer() {
   const rotation = useRef(new Animated.Value(0)).current;
   const animationRef = useRef<Animated.CompositeAnimation | null>(null);
 
-  // 1. Получаем состояние через официальный хук
+  // 1. Пользуемся встроенным хуком (он реактивный)
   const playbackState = usePlaybackState();
-  const [manualState, setManualState] = useState<State>(State.None);
+  
+  // 2. Оставляем один ручной стейт для подстраховки
+  const [manualIsPlaying, setManualIsPlaying] = useState(false);
 
-  // 2. Интервал для "принудительного" обновления (если хук тормозит)
+  // 3. ЕДИНЫЙ интервал для синхронизации состояния
   useEffect(() => {
-    const interval = setInterval(async () => {
-      const s = await TrackPlayer.getState();
-      if (s !== manualState) setManualState(s);
-    }, 500);
+    const updateState = async () => {
+      try {
+        // Теперь TypeScript увидит это через звёздочку (*)
+        const s = await TrackPlayer.getState(); 
+        setManualIsPlaying(s === State.Playing);
+      } catch (e) {
+        // Игнорируем ошибки инициализации
+      }
+    };
+
+    const interval = setInterval(updateState, 1000);
     return () => clearInterval(interval);
-  }, [manualState]);
+  }, []);
 
-  // 3. Определяем итоговый статус (играет или нет)
-  const currentState = (playbackState && typeof playbackState === 'object') 
-    ? playbackState.state 
-    : playbackState;
+  // 4. Итоговое решение: играет или нет?
+  // В v4.0 playbackState — это объект { state: State }
+  const currentState = playbackState?.state ?? State.None;
+  const isActuallyPlaying = currentState === State.Playing || manualIsPlaying;
 
-  // Кнопка активна, если либо хук, либо ручной опрос говорят "Playing"
-  const isActuallyPlaying = currentState === State.Playing || manualState === State.Playing;
-
-  // 4. ОДИН useEffect для анимации
+  // 5. Управление анимацией пластинки
   useEffect(() => {
     if (isActuallyPlaying) {
       const spin = Animated.loop(
@@ -50,24 +58,12 @@ export default function MusicPlayer() {
       spin.start();
       animationRef.current = spin;
     } else {
+      // Плавная остановка (опционально) или резкая:
       animationRef.current?.stop();
       animationRef.current = null;
     }
     return () => animationRef.current?.stop();
   }, [isActuallyPlaying]);
-
-  const [manualIsPlaying, setManualIsPlaying] = useState(false);
-
-useEffect(() => {
-  const interval = setInterval(async () => {
-    const s = await TrackPlayer.getState();
-    setManualIsPlaying(s === State.Playing);
-  }, 500); // Опрашиваем плеер 2 раза в секунду
-
-  return () => clearInterval(interval);
-}, []);
-
-
 
   const rotateInterpolate = rotation.interpolate({
     inputRange: [0, 1],
@@ -87,10 +83,13 @@ useEffect(() => {
             resizeMode="contain"
           />
           
-          {typeof currentImage === 'string' && (
+          {typeof currentImage === 'string' && currentImage !== '' && (
               <Animated.Image 
                 source={{ uri: currentImage }}
-                style={[styles.centerImage, { transform: [{ rotate: rotateInterpolate }] }]}
+                style={[
+                  styles.centerImage, 
+                  { transform: [{ rotate: rotateInterpolate }] }
+                ]}
                 resizeMode="cover"
               />
           )}
@@ -98,8 +97,12 @@ useEffect(() => {
       </View>
       
       <View style={styles.layoutTxtSong}>
-        <Text style={styles.textSong}>{currentTrack?.title}</Text>
-        <Text style={styles.textArtist}>{currentArtist}</Text>
+        <Text numberOfLines={1} style={styles.textSong}>
+          {currentTrack?.title || "Выберите трек"}
+        </Text>
+        <Text numberOfLines={1} style={styles.textArtist}>
+          {currentArtist || "Неизвестен"}
+        </Text>
       </View>
 
       <View style={styles.btn}>
@@ -108,14 +111,14 @@ useEffect(() => {
         }}>
           <FontAwesome5 
             name={isActuallyPlaying ? "pause" : "play"} 
-            size={30} 
+            size={24} 
             color="white" 
           />
         </TouchableOpacity>
       </View>
     </View>
   );
-};
+}
 const styles = StyleSheet.create({
   layout: {
     flexDirection: 'row',

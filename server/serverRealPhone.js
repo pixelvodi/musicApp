@@ -194,6 +194,8 @@ app.post('/getQueue', (req, res) => {
   db.all(sql, queue, (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
 
+    
+
     const tracksQueue = rows.map(track => ({
       id: track.id,
       title: track.title,
@@ -202,6 +204,7 @@ app.post('/getQueue', (req, res) => {
       audioUrl: `http://${localIP}:${port}/static/music/${track.filename}`,
       artwork: track.artwork ? `http://${localIP}:${port}/static/img/${track.artwork}` : null
     }));
+    console.log("SENDING TO CLIENT:", tracksQueue[0]);
 
     console.log("Отправка очереди:", tracksQueue.length, "треков");
     res.json(tracksQueue);

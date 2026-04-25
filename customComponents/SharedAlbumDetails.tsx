@@ -7,21 +7,20 @@ import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Audio } from 'expo-av';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-    Animated,
-    Modal,
-    Platform,
-    Pressable,
-    SafeAreaView,
-    ScrollView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  Animated,
+  Modal,
+  Platform,
+  Pressable,
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import ImageColors from 'react-native-image-colors';
 import TextTicker from 'react-native-text-ticker';
@@ -32,6 +31,7 @@ type Track = {
   album_id: number;
   name: string;
   audioUrl: string;
+  artwork?: string;
 };
 // const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -51,7 +51,7 @@ export default function AlbumDetails() {
 
   const [isInView, setIsInView] = useState(false);
   const { currentTrack, setCurrentTrack, setCurrentArtist, setCurrentImage } = useTrack();
-  const [sound, setSound] = useState<Audio.Sound | null>(null);
+  
   const [isPlaying, setIsPlaying] = useState(false);
 
   const [menuVisible, setMenuVisible] = useState(false);
@@ -241,8 +241,12 @@ const removeFromFavoritesAlbum = async (albumId: number) => {
         }
         const response = await fetch(`http://192.168.1.2:3000/tracks/${id}`);
         const data = await response.json();
+        const tracksWithArtwork = data.map((t: any) => ({
+          ...t,
+          artwork: imageUrlString // Используем imageUrlString, который пришел в params
+        }));
         const ids = (data as { id: number }[]).map(item => item.id);
-        setTracks(data);
+        setTracks(tracksWithArtwork);
         console.log("Треки", ids)
       } catch (error) {
         console.error('Ошибка загрузки треков:', error);
