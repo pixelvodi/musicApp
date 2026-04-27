@@ -525,3 +525,28 @@ app.post('/favoritesAlbum/remove', (req, res) => {
       res.json({ success: true, message: 'Удалено из избранного' });
   });
 });
+
+app.post('/getTextTrack', (req, res) => {
+  const { track_id } = req.body;
+  const id = Number(track_id);
+  
+
+  db.get('SELECT text FROM tracks WHERE track_id = ?', [id], (err, row) => {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+
+    // ЛОГ ДЛЯ ПРОВЕРКИ
+    console.log(`Результат БД для ID ${id}:`, row);
+
+    if (row && row.text !== undefined) {
+      const lyricsText = row.text; // Сохраняем в константу перед отправкой
+
+      console.log("Текст: ", lyricsText);
+      return res.json({ text: lyricsText });
+    } else {
+      console.log("Строка найдена, но колонки text нет или она пуста");
+      return res.json({ text: null });
+    }
+  });
+});
