@@ -339,10 +339,13 @@ const removeFromFavoritesAlbum = async (albumId: number) => {
             </View>
           </View>
 
-          {tracks.map((item, index) => (
+          {tracks.map((item, index) => {
+            const isActive = currentTrack && String(item.id) === String(currentTrack.id);
+            return (
             <TouchableOpacity
               key={item.id}
               onPress={() => {
+                console.log(`ID из списка: ${typeof item.id} (${item.id}), ID из контекста: ${typeof currentTrack?.id} (${currentTrack?.id})`);
                 // ПРАВИЛЬНО: Передаем весь массив объектов и индекс начала
                 setCurrentTrack(item);
                 setCurrentArtist(Array.isArray(artist) ? artist[0] : artist || null);
@@ -350,13 +353,13 @@ const removeFromFavoritesAlbum = async (albumId: number) => {
 
                 playQueue(tracks, index); // index — это позиция трека в массиве
               }}>
-                      <View key={item.id} style={[styles.trackItem, {backgroundColor: item.id === currentTrack?.id ? 'rgba(42, 42, 42, 0.4)' : 'transparent' }]}>
+                      <View key={item.id} style={[styles.trackItem, {backgroundColor: isActive ? 'rgba(42, 42, 42, 0.4)' : 'transparent' }]}>
               <View>
                 <Text 
                   style={[
                     styles.trackTitle,
                     { 
-                      color: item.id === currentTrack?.id ? '#0077C0' : 'white',
+                      color: isActive ? '#0077C0' : 'white',
                     }
                   ]}
                 >
@@ -373,7 +376,8 @@ const removeFromFavoritesAlbum = async (albumId: number) => {
               </TouchableOpacity>
             </View>
             </TouchableOpacity>
-          ))}
+          );
+        })};
         </ScrollView>
 
         <Modal
