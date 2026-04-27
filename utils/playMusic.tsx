@@ -71,6 +71,7 @@ export const playQueue = async (tracks: any[], startIndex = 0) => {
         Capability.Stop,
         Capability.SeekTo,
     ],
+    
     // Настройки для Android в v5.0 теперь минималистичны
     android: {
         appKilledPlaybackBehavior: AppKilledPlaybackBehavior.StopPlaybackAndRemoveNotification,
