@@ -39,13 +39,28 @@ export const PlaybackService = async function() {
         TrackPlayer.pause();
     });
 
-    TrackPlayer.addEventListener(Event.RemoteNext, () => {
-        console.log('--- [СИГНАЛ] ЖМУ NEXT ---');
-        TrackPlayer.skipToNext();
-    });
+    TrackPlayer.addEventListener(Event.RemoteNext, async () => {
+    console.log('--- [СИГНАЛ] ЖМУ NEXT ---');
+    try {
+        await TrackPlayer.skipToNext();
+        await TrackPlayer.play(); // Принудительный старт после переключения
+    } catch (e) {
+        // Если это был последний трек в очереди, skipToNext может выкинуть ошибку
+        console.log('Конец очереди или ошибка переключения');
+    }
+});
 
-    TrackPlayer.addEventListener(Event.RemotePrevious, () => {
-        console.log('--- [СИГНАЛ] ЖМУ PREVIOUS ---');
-        TrackPlayer.skipToPrevious();
-    });
+TrackPlayer.addEventListener(Event.RemotePrevious, async () => {
+    console.log('--- [СИГНАЛ] ЖМУ PREVIOUS ---');
+    try {
+        await TrackPlayer.skipToPrevious();
+        await TrackPlayer.play(); // Принудительный старт после переключения назад
+    } catch (e) {
+        console.log('Начало очереди или ошибка');
+    }
+});
+TrackPlayer.addEventListener(Event.RemoteSeek, (event) => {
+    console.log(`--- [СИГНАЛ] ПЕРЕМОТКА НА: ${event.position} сек. ---`);
+    TrackPlayer.seekTo(event.position);
+});
 };

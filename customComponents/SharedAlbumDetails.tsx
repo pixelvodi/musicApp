@@ -346,12 +346,11 @@ const removeFromFavoritesAlbum = async (albumId: number) => {
               key={item.id}
               onPress={() => {
                 console.log(`ID из списка: ${typeof item.id} (${item.id}), ID из контекста: ${typeof currentTrack?.id} (${currentTrack?.id})`);
-                // ПРАВИЛЬНО: Передаем весь массив объектов и индекс начала
                 setCurrentTrack(item);
                 setCurrentArtist(Array.isArray(artist) ? artist[0] : artist || null);
                 setCurrentImage(imageUrlString);
 
-                playQueue(tracks, index); // index — это позиция трека в массиве
+                playQueue(tracks, index);
               }}>
                       <View key={item.id} style={[styles.trackItem, {backgroundColor: isActive ? 'rgba(42, 42, 42, 0.4)' : 'transparent' }]}>
               <View>
@@ -377,7 +376,7 @@ const removeFromFavoritesAlbum = async (albumId: number) => {
             </View>
             </TouchableOpacity>
           );
-        })};
+        })}
         </ScrollView>
 
         <Modal
