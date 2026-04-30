@@ -22,6 +22,28 @@ export const styles = StyleSheet.create({
     resizeMode: 'contain',
     borderRadius: 50,
   },
+  imgLogoModal: {
+    width: 60,
+    height: 60,
+    resizeMode: 'contain',
+    borderRadius: 50,
+    marginTop: 20,
+    marginLeft: -20,
+  },
+  imgLogoModalEdit: {
+    width: 120,
+    height: 120,
+    resizeMode: 'contain',
+    borderRadius: 60,
+    marginTop: 20,
+  },
+  modalContentText: {
+    marginLeft: 15,
+    marginTop: 20,
+  },
+  modalContent: {
+    marginTop: 20,
+  },
   txtLogo: {
     color: '#FFFFFF',
     fontSize: 15,
@@ -331,6 +353,46 @@ export const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: 'center',
   },
-
+  modalCustom: {
+    margin: 0, // Убирает отступы самой модалки
+    justifyContent: 'flex-end', // Прижимает содержимое вправо
+    flexDirection: 'row', // Указывает направление
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)', // Затемнение фона
+    justifyContent: 'flex-end',          // Прижимаем к правому краю
+    flexDirection: 'row',                // Выравнивание по горизонтали
+  },
+  modalView: {
+    width: '75%',                        // Ширина твоего окна
+    backgroundColor: '#121212',
+    height: '100%',                      // На всю высоту
+    padding: 35,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: -2,
+      height: 0,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  openButton: {
+    backgroundColor: '#F194FF',
+    borderRadius: 20,
+    padding: 10,
+    elevation: 2,
+  },
+  textStyle: {
+    color: 'white',
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  modalText: {
+    marginBottom: 15,
+    textAlign: 'center',
+    fontSize: 18,
+  },
 
 })
