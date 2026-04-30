@@ -1,21 +1,165 @@
-import AntDesign from '@expo/vector-icons/AntDesign';
+import Feather from '@expo/vector-icons/Feather';
 import { router } from 'expo-router';
-import React from 'react';
-import { Animated, Image, ScrollView, StatusBar, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { Animated, Image, ScrollView, StatusBar, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import Modal from 'react-native-modal';
 import { useHomeLogic } from '../../../utils/logicHome';
 import { styles } from '../../../utils/stylesHome';
 
 export default function Home() {
-  const { albums, albumHowAboutListen, albumColors, clearReg, artist } = useHomeLogic();
+  const { albums, albumHowAboutListen, albumColors, clearReg, artist, modalVisible, setModalVisible, modalScreen, setModalScreen, closeModal,
+    userName, isEditing, setUserName, setIsEditing, toggleEdit, userEmail, setUserEmail, userAvatar, setUserAvatar, pickImage, userId } = useHomeLogic();
+  const [avatarKey, setAvatarKey] = useState(0);
+  
+  // Обновляем ключ аватара при изменении
+  useEffect(() => {
+    setAvatarKey(k => k + 1);
+  }, [userAvatar, modalVisible]);
+
+  const getAvatarUrl = () => {
+    if (!userAvatar) return require('@/assets/images/ava.jpg');
+    return { uri: `http://192.168.1.2:3000/static${userAvatar}?t=${Date.now()}` };
+  };
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
       <View style={styles.topLine}>
-        <Image style={styles.imgLogo} source={require('@/assets/images/ava.jpg')} />
         <Text style={styles.txtLogo}>Luma</Text>
-        <TouchableOpacity onPress={clearReg}>
-          <AntDesign name="setting" size={35} style={styles.settingsIcon} />
+        <TouchableOpacity onPress={() => setModalVisible(true)}>
+          <Image key={avatarKey} style={styles.imgLogo} source={getAvatarUrl()} />
         </TouchableOpacity>
+
+        <Modal
+          isVisible={modalVisible}
+          // Используем функцию закрытия, которую опишем ниже
+          onBackdropPress={closeModal} 
+          animationIn="slideInRight"
+          animationOut="slideOutRight"
+          backdropTransitionOutTiming={0}
+          style={styles.modalCustom}
+        >
+          <TouchableOpacity 
+            style={styles.modalOverlay} 
+            activeOpacity={1} 
+            onPressOut={closeModal}
+          >
+            <View style={styles.modalView}>
+              {modalScreen === 'menu' ? (
+                <>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Image key={avatarKey} style={styles.imgLogoModal} source={getAvatarUrl()} />
+                    <View style={styles.modalContentText}>
+                      <Text style={{ color: '#FFFFFF', fontSize: 22 }}>{userName}</Text>
+                      {/* ДОБАВЛЕНО: переключение экрана */}
+                      <TouchableOpacity onPress={() => setModalScreen('profile')}>
+                        <Text style={{ color: '#FFFFFF', opacity: 0.7 }}>Посмотреть профиль</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+
+                  <View style={styles.modalContent}>
+                    <TouchableOpacity>
+                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <Feather name="settings" size={24} color="white" />
+                        <Text style={{ color: 'white', marginLeft: 15 }}>Настройки</Text>
+                      </View>
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity onPress={clearReg}>
+                      <View style={{ flexDirection: 'row', marginTop: 20, alignItems: 'center' }}>
+                        <Feather name="log-out" size={24} color="white" />
+                        <Text style={{ color: 'white', marginLeft: 15 }}>Выйти</Text>
+                      </View>
+                    </TouchableOpacity>
+                  </View>
+                </>
+              ) : (
+                <View style={{ flex: 1 }}>
+                  {/* Кнопка назад */}
+                  <TouchableOpacity 
+                    onPress={() => setModalScreen('menu')} 
+                    style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 20, marginLeft: -10 }}
+                  >
+                    <Feather name="chevron-left" size={24} color="white" />
+                    <Text style={{ color: 'white', marginLeft: 10 }}>Назад</Text>
+                  </TouchableOpacity>
+
+                  <Text style={{ color: 'white', fontSize: 24, fontWeight: 'bold', marginBottom: 20 }}>Профиль</Text>
+
+                  {/* БЛОК РЕДАКТИРОВАНИЯ */}
+                  <View style={{ gap: 20 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <TouchableOpacity onPress={() => isEditing && pickImage()}>
+                        <Image key={avatarKey} style={styles.imgLogoModalEdit} source={getAvatarUrl()} />
+
+                        {/* Маленькая иконка-подсказка поверх аватара (опционально) */}
+                        <View style={{ position: 'absolute', bottom: 0, right: 0, backgroundColor: '#62d273', borderRadius: 20, padding: 5, opacity: isEditing ? 1 : 0.5 }}>
+                          <Feather name="camera" size={16} color="white" />
+                        </View>
+                      </TouchableOpacity>
+                    </View>
+                    
+                    {/* ПОЛЕ: ИМЯ */}
+                    <View>
+                      <Text style={{ color: '#aaa', fontSize: 12, marginBottom: 5 }}>Имя пользователя</Text>
+                      <View style={{ 
+                        flexDirection: 'row', 
+                        alignItems: 'center', 
+                        borderBottomWidth: 1, 
+                        borderBottomColor: isEditing ? '#62d273' : '#333',
+                        paddingBottom: 5 
+                      }}>
+                        <TextInput
+                          style={{ flex: 1, color: 'white', fontSize: 16 }}
+                          value={userName}
+                          onChangeText={setUserName}
+                          editable={isEditing}
+                        />
+                      </View>
+                    </View>
+
+                    {/* ПОЛЕ: ПОЧТА */}
+                    <View>
+                      <Text style={{ color: '#aaa', fontSize: 12, marginBottom: 5 }}>Электронная почта</Text>
+                      <View style={{ 
+                        flexDirection: 'row', 
+                        alignItems: 'center', 
+                        borderBottomWidth: 1, 
+                        borderBottomColor: isEditing ? '#62d273' : '#333',
+                        paddingBottom: 5 
+                      }}>
+                        <TextInput
+                          style={{ flex: 1, color: 'white', fontSize: 16 }}
+                          value={userEmail}
+                          onChangeText={setUserEmail}
+                          editable={isEditing}
+                          keyboardType="email-address"
+                        />
+                      </View>
+                    </View>
+
+                    {/* КНОПКА РЕДАКТИРОВАТЬ / СОХРАНИТЬ */}
+                    <TouchableOpacity 
+                      onPress={toggleEdit}
+                      style={{ 
+                        backgroundColor: isEditing ? '#62d273' : '#333', 
+                        padding: 12, 
+                        borderRadius: 8, 
+                        alignItems: 'center',
+                        marginTop: 10 
+                      }}
+                    >
+                      <Text style={{ color: 'white', fontWeight: 'bold' }}>
+                        {isEditing ? 'Сохранить изменения' : 'Редактировать профиль'}
+                      </Text>
+                    </TouchableOpacity>
+
+                  </View>
+                </View>
+              )}
+            </View>
+          </TouchableOpacity>
+        </Modal>
       </View>
 
       <ScrollView style={styles.content} contentContainerStyle={{ paddingBottom: 200 }}  nestedScrollEnabled showsVerticalScrollIndicator={false}>

@@ -4,6 +4,21 @@ const cors = require('cors');
 const path = require('path');
 const { error } = require('console');
 const { json } = require('stream/consumers');
+const multer = require('multer');
+
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'public/avatar/');
+  },
+  filename: (req, file, cb) => {
+    // Берем user_id из тела запроса и сохраняем как 1.jpg, 2.jpg и т.д.
+    const userId = req.body.user_id; 
+    cb(null, `${userId}.jpg`); 
+  }
+});
+
+const upload = multer({ storage: storage });
 
 const app = express();
 const port = 3000;
@@ -13,6 +28,11 @@ const localIP = '192.168.1.2';
 
 app.use(cors());
 app.use(express.json());
+app.use('/static', express.static(path.join(__dirname, 'public'), {
+  maxAge: 0,
+  etag: false,
+  cacheControl: 'no-cache, no-store, must-revalidate'
+}));
 
 const db = new sqlite3.Database('./musicapp.sqlite');
 
@@ -132,8 +152,6 @@ app.listen(port, '0.0.0.0', () => {
   console.log(`✅ Сервер запущен: http://${localIP}:${port}`);
 });
 
-app.use('/static', express.static(path.join(__dirname, 'public')));
-
 
 app.get('/tracks/:albumId', (req, res) => {
   const albumId = req.params.albumId;
@@ -221,6 +239,50 @@ app.get('/users', (req, res) => {
   });
 });
 
+app.get('/getUserNameOrEmail', (req, res) => {
+  const { user_id } = req.query;
+  db.get('SELECT email, username, avatar FROM users WHERE user_id = ?', [user_id], (err, row) => {
+    console.log(`Получение данных для user_id ${user_id}:`, row);
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: err.message });
+    }
+    if (row) {
+      return res.json({ email: row.email, username: row.username, avatar: row.avatar });
+    } else {
+      return res.status(404).json({ error: 'Пользователь не найден' });
+    }
+  });
+});
+
+app.post('/users/uploadAvatar', upload.single('avatar'), (req, res) => {
+  const userId = req.body.user_id;
+  if (!userId) return res.status(400).json({ error: 'No user_id provided' });
+
+  // Путь для базы данных
+  const avatarPath = `/avatar/${userId}.jpg`; 
+
+  db.run('UPDATE users SET avatar = ? WHERE user_id = ?', [avatarPath, userId], (err) => {
+    if (err) return res.status(500).json({ error: err.message });
+    
+    // Возвращаем путь, чтобы фронтенд сразу обновил картинку
+    res.json({ message: 'Аватар обновлен', avatar_url: avatarPath });
+  });
+});
+app.post('/users/updateUser', (req, res) => {
+  const { user_id, new_email, new_username } = req.body;
+
+  db.run('UPDATE users SET email = ?, username = ? WHERE user_id = ?', [new_email, new_username, user_id], function (err) {
+    if (err) {
+      console.error('Ошибка при обновлении email:', err.message);
+      return res.status(500).json({ error: err.message });
+    }
+    console.log("Email обновлен для пользователя:", user_id);
+    console.log("Новый email:", new_email);
+    console.log("Новый username:", new_username);
+    return res.json({ message: 'Email успешно обновлен' });
+  });
+});
 
 app.post('/users/register', (req, res) => {
   const { email, password } = req.body;
