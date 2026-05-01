@@ -1,5 +1,6 @@
 import { getDominantColor } from '@/utils/imgBackground';
 import { useLibraryLikesTrackLogic } from '@/utils/libraryLikesTrackLogicc';
+import { useTheme } from '@/utils/ThemeContext';
 import { useTrack } from '@/utils/TrackContext';
 import AntDesign from '@expo/vector-icons/AntDesign';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -29,8 +30,11 @@ export default function Library() {
     const [currentUserId, setCurrentUserId] = useState<string | null>(null);
     const [selectedTrack, setSelectedTrack] = useState<FavoriteTrack | null>(null);
     const [favoriteAlbums, setFavoriteAlbums] = useState<any[]>([]);
+    const [favoriteArtists, setFavoriteArtists] = useState<any[]>([]);
+    const [combinedData, setCombinedData] = useState<any[]>([]);
     const [albums, setAlbums] = useState<Album[]>([]);
     const [albumColors, setAlbumColors] = useState<{ [key: number]: string }>({});
+    const { accentColor } = useTheme();
 
     useEffect(() => {
         axios.get<Album[]>('http://192.168.1.2:3000/albums')
@@ -51,11 +55,42 @@ export default function Library() {
     }
 };
 
+    const fetchFavoriteArtists = async () => {
+        if (!currentUserId) return;
+        try {
+            const response = await fetch(`http://192.168.1.2:3000/favoritesArtist/${currentUserId}`);
+            const data = await response.json();
+            setFavoriteArtists(data);
+            
+            const artistsWithType = data.map((artist: any) => ({
+                ...artist,
+                type: 'artist',
+            }));
+            
+            setCombinedData(prev => {
+                const albumsWithType = favoriteAlbums.map(album => ({
+                    ...album,
+                    type: 'album',
+                }));
+                return [...albumsWithType, ...artistsWithType];
+            });
+        } catch (e) {
+            console.error("Ошибка загрузки артистов", e);
+        }
+    };
+
 useEffect(() => {
     if (currentUserId) {
         fetchFavoriteAlbums();
+        fetchFavoriteArtists();
     }
 }, [currentUserId]);
+
+useEffect(() => {
+    const albumsWithType = favoriteAlbums.map(album => ({ ...album, type: 'album' }));
+    const artistsWithType = favoriteArtists.map(artist => ({ ...artist, type: 'artist' }));
+    setCombinedData([...albumsWithType, ...artistsWithType]);
+}, [favoriteAlbums, favoriteArtists]);
 
 useEffect(() => {
     if (favoriteAlbums.length === 0) return;
@@ -88,54 +123,71 @@ useEffect(() => {
 }, []);
 
     // Отрисовка одного трека (вынесена из return для чистоты)
-    const renderAlbum = ({ item }: { item: any }) => (
-        console.log("Рендер альбома ID:", item.id), // Лог для проверки данных
+    const renderItem = ({ item }: { item: any }) => (
     <TouchableOpacity 
-        style={[styles.albumCard, { backgroundColor: albumColors[item.id] ?? '#121212' }]}
-        onPress={() => router.push({
-            pathname: '/tabs/library/albumDetails',
-            params: { id: item.id, name: item.name, imageUrl: item.imageUrl, artist: item.artist }
-        })}
+        style={[styles.albumCard, { backgroundColor: item.type === 'artist' ? '#333' : albumColors[item.id] ?? '#121212' }]}
+        onPress={() => {
+            if (item.type === 'artist') {
+                router.push({
+                    pathname: '/tabs/library/artistDetails',
+                    params: { name: item.name, imageUrl: item.img_artist, id: item.id.toString() }
+                });
+            } else {
+                router.push({
+                    pathname: '/tabs/library/albumDetails',
+                    params: { id: item.id, name: item.name, imageUrl: item.imageUrl, artist: item.artist }
+                });
+            }
+        }}
     >
-        <View style={styles.darkLaouyt}/>
-                        <View style={styles.vinylContainerHorizontal}>
-                          <Image
-                            source={require('@/customComponents/images/pngPLastinka.png')}
-                            style={styles.vinylHorizontal}
-                          />
-                            <Image
-                              source={{ uri: item.imageUrl }}
-                              style={styles.centerImageHorizontal}
-                              resizeMode="contain"
-                            />
-                        </View>
-        <Text style={styles.albumName} numberOfLines={1}>{item.name}</Text>
+        
+        {item.type === 'artist' ? (
+            <Image
+                source={{ uri: item.img_artist }}
+                style={styles.artistFullImage}
+            />
+        ) : (
+            <>
+                <View style={styles.darkLaouyt}/>
+                <View style={styles.vinylContainerHorizontal}>
+                    <Image
+                        source={require('@/customComponents/images/pngPLastinka.png')}
+                        style={styles.vinylHorizontal}
+                    />
+                    <Image
+                        source={{ uri: item.imageUrl }}
+                        style={styles.centerImageHorizontal}
+                        resizeMode="contain"
+                    />
+                </View>
+            </>
+        )}
+        {item.type === 'artist' && <View style={styles.darkLaouyt}/>}
+        <Text style={[styles.albumName, item.type === 'artist' && styles.artistNameBottom]} numberOfLines={1}>{item.name}</Text>
     </TouchableOpacity>
-
 );
     return (
         <View style={styles.container}>
             <FlatList
-                // Теперь ГЛАВНЫЙ список — это АЛЬБОМЫ
-                data={favoriteAlbums}
-                keyExtractor={(item) => `album-${item.id}`}
-                renderItem={renderAlbum}
+                data={combinedData}
+                keyExtractor={(item) => `${item.type}-${item.id}`}
+                renderItem={renderItem}
                 numColumns={2} // ВОТ ОНО: два в ряд
                 columnWrapperStyle={styles.albumRow} // Отступы между колонками
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={{ paddingBottom: 100 }}
 
-                // ВЕРХНЯЯ ЧАСТЬ (Заголовок и кнопка треков)
+// ВЕРХНЯЯ ЧАСТЬ (Заголовок и кнопка треков)
                 ListHeaderComponent={
                     <View>
                         <Text style={styles.headerTitle}>Медиатека</Text>
                         
                         <TouchableOpacity 
-                            style={styles.likedHeroCard} 
+                            style={[styles.likedHeroCard, { backgroundColor: accentColor }]} 
                             onPress={() => router.push({pathname: '/tabs/library/libraryLikesTrack'})}
                         >
                             <View style={styles.gradientPlaceholder}>
-        
+         
                                 {/* Большая иконка сердца (центрирована) */}
                                 <AntDesign name="heart" size={100} color="white" style={styles.heartIconBackground} />
                                 
@@ -148,6 +200,7 @@ useEffect(() => {
                             </View>
                         </TouchableOpacity>
 
+                        
                         
                     </View>
                 }
@@ -189,7 +242,6 @@ const styles = StyleSheet.create({
     gradientPlaceholder: {
         width: '100%',
         height: 180, // Чуть увеличим высоту для баннера
-        backgroundColor: '#0077C0',
         // justify/align тут нужны для центрирования большой иконки
         justifyContent: 'center', 
         alignItems: 'center',
@@ -318,11 +370,63 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 50,
   },
-  centerImageHorizontal: {
+centerImageHorizontal: {
     width: 80, // Размер центрального изображения
     height: 80,
     left: 50,
     borderRadius: 50, // Круглая форма
   },
-    
+  artistsSection: {
+    marginBottom: 20,
+  },
+  artistCard: {
+    marginRight: 15,
+    alignItems: 'center',
+  },
+  artistImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    marginBottom: 8,
+  },
+  artistName: {
+    color: 'white',
+    fontSize: 14,
+    fontFamily: 'MyFont',
+    maxWidth: 80,
+    textAlign: 'center',
+  },
+  artistCircle: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    position: 'absolute',
+    top: 15,
+    left: 32,
+  },
+  artistFullImage: {
+    width: '100%',
+    height: '100%',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+  },
+  artistNameOverImage: {
+    position: 'absolute',
+    top: 10,
+    left: 5,
+    right: 5,
+    zIndex: 5,
+    textAlign: 'center',
+  },
+  artistNameBottom: {
+    position: 'absolute',
+    bottom: 10,
+    left: 5,
+    right: 5,
+    textAlign: 'center',
+    color: '#fff',
+    zIndex: 5,
+  },
+     
 });

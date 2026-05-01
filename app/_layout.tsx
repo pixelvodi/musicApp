@@ -6,6 +6,7 @@ import { PermissionsAndroid, Platform } from 'react-native';
 import Toast from 'react-native-toast-message';
 import { PlaybackService, setupPlayer } from '../utils/trackPlayerService';
 // index.js
+import { ThemeProvider } from '@/utils/ThemeContext';
 import { registerRootComponent } from 'expo';
 import { ExpoRoot } from 'expo-router';
 import TrackPlayer from 'react-native-track-player';
@@ -66,11 +67,14 @@ export default function RootLayout() {
   if (!fontsLoaded) return null;
 
   return (
-    <TrackProvider>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="tabs" />
-      </Stack>
-      <Toast />
-    </TrackProvider>
+    // Оборачиваем все в ThemeProvider, чтобы цвет был доступен везде
+    <ThemeProvider>
+      <TrackProvider>
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="tabs" />
+        </Stack>
+        <Toast />
+      </TrackProvider>
+    </ThemeProvider>
   );
 }

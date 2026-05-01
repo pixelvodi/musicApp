@@ -148,6 +148,115 @@ app.get('/albumsImg', (req, res) => {
   });
 });
 
+app.get('/album/:id', (req, res) => {
+  const albumId = req.params.id;
+  db.get(`
+    SELECT al.artist_id, ar.img_artist 
+    FROM albums al 
+    JOIN artists ar ON al.artist_id = ar.artist_id 
+    WHERE al.album_id = ?
+  `, [albumId], (err, row) => {
+    if (err) return res.status(500).json({ error: err.message });
+    if (row) {
+      res.json({ 
+        artist_id: row.artist_id,
+        artist_img: row.img_artist 
+      });
+    } else {
+      res.status(404).json({ error: 'Альбом не найден' });
+    }
+  });
+});
+
+app.get('/artist/:id', (req, res) => {
+  const artistId = req.params.id;
+  db.get('SELECT artist_id, name, img_artist FROM artists WHERE artist_id = ?', [artistId], (err, row) => {
+    if (err) return res.status(500).json({ error: err.message });
+    if (row) {
+      res.json({
+        id: row.artist_id,
+        name: row.name,
+        img_artist: row.img_artist ? `http://${localIP}:${port}/static/img/${row.img_artist}` : null
+      });
+    } else {
+      res.status(404).json({ error: 'Артист не найден' });
+    }
+  });
+});
+
+app.get('/artist/:id/tracks', (req, res) => {
+  const artistId = req.params.id;
+  
+  db.all(`
+    SELECT 
+      t.track_id AS id,
+      t.title,
+      t.count,
+      t.filename,
+      a.img AS artwork,
+      ar.name AS artist_name
+    FROM tracks t
+    JOIN albums a ON t.album_id = a.album_id
+    JOIN artists ar ON a.artist_id = ar.artist_id
+    WHERE a.artist_id = ?
+    ORDER BY t.count DESC, t.track_id ASC
+  `, [artistId], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    
+    const tracks = rows.map(track => ({
+      id: track.id,
+      title: track.title,
+      artist: track.artist_name,
+      count: track.count || 0,
+      duration: '0:00',
+      imageUrl: track.artwork 
+        ? `http://${localIP}:${port}/static/img/${track.artwork}` 
+        : null,
+      audioUrl: track.filename 
+        ? `http://${localIP}:${port}/static/music/${track.filename}` 
+        : null
+    }));
+    
+    res.json(tracks);
+  });
+});
+
+app.post('/tracks/:id/increment-count', (req, res) => {
+  const trackId = req.params.id;
+  
+  db.run('UPDATE tracks SET count = COALESCE(count, 0) + 1 WHERE track_id = ?', [trackId], (err) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ success: true });
+  });
+});
+
+app.get('/artist/:id/albums', (req, res) => {
+  const artistId = req.params.id;
+  
+  db.all(`
+    SELECT 
+      a.album_id AS id,
+      a.name,
+      a.img AS imageUrl
+    FROM albums a
+    WHERE a.artist_id = ?
+    ORDER BY a.album_id DESC
+  `, [artistId], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    
+    const albums = rows.map(album => ({
+      id: album.id,
+      title: album.name,
+      imageUrl: album.imageUrl 
+        ? `http://${localIP}:${port}/static/img/${album.imageUrl}` 
+        : null,
+      year: 2024
+    }));
+    
+    res.json(albums);
+  });
+});
+
 app.listen(port, '0.0.0.0', () => {
   console.log(`✅ Сервер запущен: http://${localIP}:${port}`);
 });
@@ -255,6 +364,18 @@ app.get('/getUserNameOrEmail', (req, res) => {
   });
 });
 
+app.get('/user/:id', (req, res) => {
+  const userId = req.params.id;
+  db.get('SELECT email, username, avatar FROM users WHERE user_id = ?', [userId], (err, row) => {
+    if (err) return res.status(500).json({ error: err.message });
+    if (row) {
+      return res.json({ email: row.email, username: row.username, avatar: row.avatar });
+    } else {
+      return res.status(404).json({ error: 'Пользователь не найден' });
+    }
+  });
+});
+
 app.post('/users/uploadAvatar', upload.single('avatar'), (req, res) => {
   const userId = req.body.user_id;
   if (!userId) return res.status(400).json({ error: 'No user_id provided' });
@@ -350,6 +471,7 @@ app.get('/search', async (req, res) => {
         t.title,
         t.filename,
         ar.name AS artist,
+        ar.artist_id,
         a.img AS img,
         a.album_id,
         'track' AS type,
@@ -365,6 +487,7 @@ app.get('/search', async (req, res) => {
       id: track.id,
       title: track.title,
       artist: track.artist,
+      artist_id: track.artist_id,
       img: track.img
         ? `http://${localIP}:${port}/static/img/${track.img}`
         : null,
@@ -406,12 +529,12 @@ app.get('/search', async (req, res) => {
 
     results.push(...albumsWithUrl);
 
-    // 3. ПОИСК АРТИСТОВ (без изменений)
+    // 3. ПОИСК АРТИСТОВ
     const artistsSearch = await dbAll(`
       SELECT 
         ar.artist_id AS id, 
         ar.name AS title,
-        NULL AS img,
+        ar.img_artist,
         'artist' AS type, 
         3 AS priority
       FROM artists ar
@@ -419,7 +542,17 @@ app.get('/search', async (req, res) => {
       LIMIT 5
     `, [q]);
 
-    results.push(...artistsSearch);
+    const artistsWithUrl = artistsSearch.map(artist => ({
+      id: artist.id,
+      title: artist.title,
+      img: artist.img_artist
+        ? `http://${localIP}:${port}/static/img/${artist.img_artist}`
+        : null,
+      type: artist.type,
+      priority: artist.priority
+    }));
+
+    results.push(...artistsWithUrl);
 
     results.sort((a, b) => a.priority - b.priority);
 
@@ -490,7 +623,7 @@ app.get('/favorites/:userId', (req, res) => {
       id: track.track_id,
       title: track.title,
       artist: track.artist,
-      audioUrl: `http://${localIP}:${port}/static/music/${track.filename}`,
+      audioUrl: track.filename ? `http://${localIP}:${port}/static/music/${track.filename}` : null,
       artwork: track.artwork ? `http://${localIP}:${port}/static/img/${track.artwork}` : null
     }));
     res.json(tracks);
@@ -585,6 +718,69 @@ app.post('/favoritesAlbum/remove', (req, res) => {
     [user_id, album_id], function(err) {
       if (err) return res.status(500).json({ error: err.message });
       res.json({ success: true, message: 'Удалено из избранного' });
+  });
+});
+
+// Проверка подписки на артиста (должно быть ПЕРЕД /:userId)
+app.get('/favoritesArtist/check', (req, res) => {
+  const { user_id, artist_id } = req.query;
+  const userIdNum = Number(user_id);
+  const artistIdNum = Number(artist_id);
+  db.get('SELECT * FROM user_favorite_artists WHERE user_id = ? AND artist_id = ?', 
+    [userIdNum, artistIdNum], (err, row) => {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json({ isFavorite: !!row });
+  });
+});
+
+// Избранные артисты
+app.get('/favoritesArtist/:userId', (req, res) => {
+  const userId = req.params.userId;
+  db.all(`
+    SELECT a.artist_id, a.name, a.img_artist
+    FROM artists a
+    JOIN user_favorite_artists ufa ON a.artist_id = ufa.artist_id
+    WHERE ufa.user_id = ?
+    ORDER BY ufa.added_at DESC
+  `, [userId], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    const artists = rows.map(artist => ({
+      id: artist.artist_id,
+      name: artist.name,
+      img_artist: artist.img_artist 
+        ? `http://${localIP}:${port}/static/img/${artist.img_artist}` 
+        : null
+    }));
+    res.json(artists);
+  });
+});
+
+app.post('/favoritesArtist/add', (req, res) => {
+  const { user_id, artist_id } = req.body;
+  const userIdNum = Number(user_id);
+  const artistIdNum = Number(artist_id);
+  const added_at = new Date().toISOString();
+
+  if (!userIdNum || !artistIdNum) {
+    return res.status(400).json({ error: 'user_id и artist_id обязательны' });
+  }
+
+  const sql = `INSERT OR IGNORE INTO user_favorite_artists (user_id, artist_id, added_at) VALUES (?, ?, ?)`;
+  
+  db.run(sql, [userIdNum, artistIdNum, added_at], function(err) {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ success: true });
+  });
+});
+
+app.post('/favoritesArtist/remove', (req, res) => {
+  const { user_id, artist_id } = req.body;
+  const userIdNum = Number(user_id);
+  const artistIdNum = Number(artist_id);
+  db.run('DELETE FROM user_favorite_artists WHERE user_id = ? AND artist_id = ?', 
+    [userIdNum, artistIdNum], function(err) {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json({ success: true });
   });
 });
 

@@ -1,11 +1,11 @@
 import { playOrStop, playQueue } from '@/utils/playMusic';
 import { responsive } from '@/utils/responsive';
+import { useTheme } from '@/utils/ThemeContext';
 import { useTrack } from '@/utils/TrackContext';
 import Entypo from '@expo/vector-icons/Entypo';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
@@ -40,6 +40,8 @@ export default function AlbumDetails() {
   const params = useLocalSearchParams();
   const { id, name, imageUrl, artist } = params;
   const imageUrlString = Array.isArray(imageUrl) ? imageUrl[0] : imageUrl;
+  const { accentColor } = useTheme();
+  console.log(accentColor);
 
   const vinylTranslateX = useRef(new Animated.Value(0)).current;
   const albumTranslateX = useRef(new Animated.Value(0)).current;
@@ -59,6 +61,8 @@ export default function AlbumDetails() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [isFavorite, setIsFavorite] = useState(false);
   const [isFavoriteAlbum, setIsFavoriteAlbum] = useState(false);
+  const [artistId, setArtistId] = useState<string | null>(null);
+  const [artistImg, setArtistImg] = useState<string | null>(null);
 
   useEffect(() => {
     if (typeof imageUrlString === 'string') {
@@ -252,7 +256,29 @@ const removeFromFavoritesAlbum = async (albumId: number) => {
         console.error('Ошибка загрузки треков:', error);
       }
     };
+    const fetchAlbumInfo = async () => {
+      if (!id) return;
+      try {
+        const res = await fetch(`http://192.168.1.2:3000/album/${id}`);
+        const data = await res.json();
+        console.log('Album info:', data);
+        if (data.artist_id) {
+          setArtistId(String(data.artist_id));
+          console.log('Fetching artist:', data.artist_id);
+          const artistRes = await fetch(`http://192.168.1.2:3000/artist/${data.artist_id}`);
+          const artistData = await artistRes.json();
+          console.log('Artist data:', artistData);
+          if (artistData && artistData.img_artist) {
+            setArtistImg(artistData.img_artist);
+            console.log('Set artistImg to:', artistData.img_artist);
+          }
+        }
+      } catch (e) {
+        console.error('Error fetching album info:', e);
+      }
+    };
     fetchTracks();
+    fetchAlbumInfo();
   }, [id]);
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: bgColor }]}>
@@ -288,7 +314,25 @@ const removeFromFavoritesAlbum = async (albumId: number) => {
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           <View style={styles.titleAndSonger}>
             <TextTicker scrollSpeed={10} loop bounce={false} numberOfLines={1} style={styles.albumTitle}>{name}</TextTicker>
-            <Text style={styles.albumArtist}>{artist}</Text>
+            <TouchableOpacity onPress={async () => {
+              if (artistId) {
+                try {
+                  const res = await fetch(`http://192.168.1.2:3000/artist/${artistId}`);
+                  const data = await res.json();
+                  router.push({
+                    pathname: '/tabs/home/artistDetails',
+                    params: { id: artistId, name: artist, imageUrl: data.img_artist || imageUrlString }
+                  });
+                } catch (e) {
+                  router.push({
+                    pathname: '/tabs/home/artistDetails',
+                    params: { id: artistId, name: artist, imageUrl: imageUrlString }
+                  });
+                }
+              }
+            }}>
+              <Text style={styles.albumArtist}>{artist}</Text>
+            </TouchableOpacity>
           </View>
 
           <View style={styles.managment}>
@@ -297,13 +341,30 @@ const removeFromFavoritesAlbum = async (albumId: number) => {
                 onPress={async () => {
                   isFavoriteAlbum ? await removeFromFavoritesAlbum(Number(id)) : await addToFavoritesAlbum(Number(id));
                 }}>
-                <FontAwesome name={isFavoriteAlbum ? "heart" : "heart-o"} size={24} color={isFavoriteAlbum ? "#0077C0" :"white"} />
+                <FontAwesome name={isFavoriteAlbum ? "heart" : "heart-o"} size={24} color={isFavoriteAlbum ? accentColor :"white"} />
               </TouchableOpacity>
-              <MaterialCommunityIcons name="download-circle-outline" size={26} color="white" />
-              <Ionicons name="person-outline" size={24} color="white" />
+<TouchableOpacity onPress={async () => {
+                if (artistId) {
+                  try {
+                    const res = await fetch(`http://192.168.1.2:3000/artist/${artistId}`);
+                    const data = await res.json();
+                    router.push({
+                      pathname: '/tabs/home/artistDetails',
+                      params: { id: artistId, name: artist, imageUrl: data.img_artist || imageUrlString }
+                    });
+                  } catch (e) {
+                    router.push({
+                      pathname: '/tabs/home/artistDetails',
+                      params: { id: artistId, name: artist, imageUrl: imageUrlString }
+                    });
+                  }
+                }
+              }}>
+                <Ionicons name="person-outline" size={24} color="white" />
+              </TouchableOpacity>
             </View>
             <View style={styles.rightManagment}>
-              <FontAwesome6 name="shuffle" size={24} color="white" />
+              <FontAwesome6 style={{opacity: 0}} name="shuffle" size={24} color="white" />
               {tracks.length > 0 && (
                 <TouchableOpacity
                   onPress={async () => {
@@ -320,19 +381,18 @@ const removeFromFavoritesAlbum = async (albumId: number) => {
                       }
                     } else {
                       // Играет другой альбом или ничего не играет → запускаем этот альбом
-                      const queueUrls = tracks.map(t => t.audioUrl);
                       setCurrentTrack(tracks[0]);
                       setCurrentArtist(Array.isArray(artist) ? artist[0] : artist || null);
                       setCurrentImage(imageUrlString);
 
-                      playQueue(queueUrls, 0)
+                      playQueue(tracks, 0)
                     }
                   }}>
                   {/* Кнопка показывает ПАУЗУ только если играет трек из ЭТОГО альбома */}
                   {isPlaying && tracks.some(track => track.id === currentTrack?.id) ? (
-                    <FontAwesome name="pause-circle" size={75} color="#0077C0" />
+                    <FontAwesome name="pause-circle" size={75} color={accentColor} />
                   ) : (
-                    <FontAwesome name="play-circle" size={75} color="#0077C0" />
+                    <FontAwesome name="play-circle" size={75} color={accentColor} />
                   )}
                 </TouchableOpacity>
               )}
@@ -352,13 +412,13 @@ const removeFromFavoritesAlbum = async (albumId: number) => {
 
                 playQueue(tracks, index);
               }}>
-                      <View key={item.id} style={[styles.trackItem, {backgroundColor: isActive ? 'rgba(42, 42, 42, 0.4)' : 'transparent' }]}>
+                      <View key={item.id} style={[styles.trackItem]}>
               <View>
                 <Text 
                   style={[
                     styles.trackTitle,
                     { 
-                      color: isActive ? '#0077C0' : 'white',
+                      color: isActive ? accentColor : 'white',
                     }
                   ]}
                 >
@@ -403,7 +463,7 @@ const removeFromFavoritesAlbum = async (albumId: number) => {
                 <Ionicons 
                   name={isFavorite ? "heart" : "heart-outline"} 
                   size={24} 
-                  color={isFavorite ? "#ff766c" : "white"} 
+                  color={isFavorite ? accentColor : "white"} 
                 />
                 <Text style={styles.menuOptionText}>
                   {isFavorite ? "Удалить из любимых" : "В любимые"}
@@ -526,7 +586,7 @@ const styles = StyleSheet.create({
   leftManagment: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    width: 120,
+    width: 60,
     alignItems: 'center',
   },
   rightManagment: {

@@ -28,16 +28,15 @@ export default function MusicPlayer() {
   const { currentTrack, currentArtist, currentImage } = useTrack();
   const [menuVisible, setMenuVisible] = useState(false);
   const playbackState = usePlaybackState();
-  const { position, duration } = useProgress(); // Хук для управления линией песни
+  const currentState = playbackState?.state ?? State.None;
+  const isActuallyPlaying = currentState === State.Playing;
+  const { position, duration } = useProgress();
   const [lyricsArray, setLyricsArray] = useState<{id: string, text: string}[]>([]);
   const imageUrlString = Array.isArray(currentImage) ? currentImage[0] : currentImage;
   const [bgColor, setBgColor] = useState('#121212');
   
   const rotation = useRef(new Animated.Value(0)).current;
   const animationRef = useRef<Animated.CompositeAnimation | null>(null);
-
-  const currentState = playbackState?.state ?? State.None;
-  const isActuallyPlaying = currentState === State.Playing;
 
   // Анимация пластинки
   useEffect(() => {
@@ -223,13 +222,23 @@ export default function MusicPlayer() {
               </View>
 
               <View style={styles.mainButtons}>
-                <TouchableOpacity onPress={() => [TrackPlayer.skipToPrevious(), TrackPlayer.play()]}>
+                <TouchableOpacity onPress={async () => {
+                  await TrackPlayer.skipToPrevious();
+                  if (!isActuallyPlaying) {
+                    await TrackPlayer.play();
+                  }
+                }}>
                   <Ionicons name="play-skip-back" size={25} color="white" />
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => playOrStop()}>
                   <FontAwesome name={isActuallyPlaying ? "pause-circle" : "play-circle"} size={50} color="white" />
                 </TouchableOpacity>
-                <TouchableOpacity onPress={() => [TrackPlayer.skipToNext(), TrackPlayer.play()]}>
+                <TouchableOpacity onPress={async () => {
+                  await TrackPlayer.skipToNext();
+                  if (!isActuallyPlaying) {
+                    await TrackPlayer.play();
+                  }
+                }}>
                   <Ionicons name="play-skip-forward" size={25} color="white" />
                 </TouchableOpacity>
               </View>

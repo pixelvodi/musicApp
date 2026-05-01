@@ -1,4 +1,5 @@
 import { getDominantColor } from '@/utils/imgBackground';
+import { useTheme } from '@/utils/ThemeContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import * as ImagePicker from 'expo-image-picker';
@@ -28,11 +29,12 @@ export const useHomeLogic = () => {
   const [albumColors, setAlbumColors] = useState<{ [key: number]: string }>({});
   const [userId, setUserId] = useState<string | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
-  const [modalScreen, setModalScreen] = useState<'menu' | 'profile'>('menu');
+  const [modalScreen, setModalScreen] = useState<'menu' | 'profile' | 'settings'>('menu');
   const [userName, setUserName] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [userEmail, setUserEmail] = useState('');
   const [userAvatar, setUserAvatar] = useState<string | null>(null);
+  const {accentColor, setAccentColor}= useTheme();
 
 
   // Загрузка данных пользователя при входе в приложение
@@ -58,7 +60,13 @@ export const useHomeLogic = () => {
         .catch(err => console.error('Ошибка альбомов:', err));
     };
 
+    const loadAccentColor = async () => {
+  const saved = await AsyncStorage.getItem('accentColor');
+  if (saved) setAccentColor(saved);
+};
+
 loadUserData();
+loadAccentColor();
   }, []);
 
 
@@ -78,6 +86,10 @@ loadUserData();
     setTimeout(() => setModalScreen('menu'), 300);
   };
 
+  const changeAccentColor = async (color: string) => {
+  setAccentColor(color);
+  await AsyncStorage.setItem('accentColor', color);
+};
 
   // Получить данные пользователя с сервера
   const fetchUserData = async () => {
@@ -231,6 +243,9 @@ loadUserData();
     userAvatar,
     setUserAvatar,
     pickImage,
-    userId
+    userId,
+    accentColor,
+    setAccentColor,
+    changeAccentColor
   };
 };
