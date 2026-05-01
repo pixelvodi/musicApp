@@ -5,17 +5,18 @@ import AntDesign from '@expo/vector-icons/AntDesign';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Audio } from 'expo-av';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import { useIsFocused } from '@react-navigation/native';
+import React, { useEffect, useRef, useState } from 'react';
 import { Animated, FlatList, SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 // 1. Объединенный тип для всех результатов поиска
 type SearchResult = {
   id: number;
   title: string;
-  artist?: string;      // Есть у треков и альбомов
-  img?: string;         // Есть у треков и альбомов
+  artist?: string;
+  artist_id?: number;
+  img?: string;
   type: 'track' | 'album' | 'artist';
   priority?: number;
-  // Дополнительные поля, которые могут прийти с бэкенда
   album_id?: number;    
   audioUrl?: string;
 };
@@ -35,7 +36,9 @@ export const checkType = (item: SearchResult) => ({
 });
 
 export default function SearchScreen() {
+    const isFocused = useIsFocused();
     const [query, setQuery] = useState('');
+    const inputRef = useRef<TextInput>(null);
     // 2. Меняем тип стейта на универсальный
     const [results, setResults] = useState<SearchResult[]>([]);
     const router = useRouter();
@@ -48,6 +51,12 @@ export default function SearchScreen() {
       const { currentTrack, setCurrentTrack, setCurrentArtist, setCurrentImage } = useTrack();
       const [sound, setSound] = useState<Audio.Sound | null>(null);
       const [isPlaying, setIsPlaying] = useState(false);
+
+    useEffect(() => {
+        if (isFocused) {
+            setTimeout(() => inputRef.current?.focus(), 100);
+        }
+    }, [isFocused]);
 
     useEffect(() => {
         if (query.trim().length < 1) {
@@ -75,6 +84,7 @@ export default function SearchScreen() {
     const renderItem = ({ item }: { item: SearchResult }) => {
         const isTrack = item.type === 'track';
         const isAlbum = item.type === 'album';
+        const isArtist = item.type === 'artist';
         
         // Динамический текст подписи
         const getSubtitle = () => {
@@ -87,9 +97,21 @@ export default function SearchScreen() {
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 10, marginLeft: 15, marginRight: 15 }}>
                 <TouchableOpacity 
                     style={{ flex: 1 }}
-                    onPress={() => {
+                    onPress={async () => {
                         // Логика перехода: треки играют, альбомы открываются, артисты - профиль
                         console.log(`Pressed ${item.type}: ${item.title}`);
+                        
+                        if (isArtist && item.id) {
+                            router.push({
+                                pathname: '/tabs/home/artistDetails',
+                                params: {
+                                    id: String(item.id),
+                                    name: item.title,
+                                    imageUrl: item.img || undefined
+                                },
+                            });
+                        }
+                        
                         {isAlbum && (
                             router.push({
                                 pathname: '/tabs/search/albumDetails',
@@ -104,42 +126,51 @@ export default function SearchScreen() {
                         if (isTrack) {
                             const startIndex = results.findIndex(t => t.id === item.id);
                             
-                            if (startIndex !== -1) {
-                                // 2. Формируем очередь элементов (чтобы использовать их в callback)
-                                const queueItems = results.slice(startIndex);
-                                
-                                // 3. Создаем массив URL, фильтруя undefined
-                                const queueUrls = queueItems
-                                    .map(t => t.audioUrl)
-                                    .filter((url): url is string => url !== undefined);
+if (startIndex !== -1) {
+                                // Получаем id артиста для загрузки его треков
+                                const artistId = item.artist_id;
+                                if (artistId) {
+                                    try {
+                                        const res = await fetch(`http://192.168.1.2:3000/artist/${artistId}/tracks`);
+                                        const artistTracks = await res.json();
+                                        
+                                        const queueTracks = artistTracks
+                                            .filter((t: any) => t.audioUrl)
+                                            .map((t: any) => ({
+                                                id: t.id,
+                                                title: t.title,
+                                                artist: t.artist,
+                                                audioUrl: t.audioUrl,
+                                                artwork: t.imageUrl
+                                            }));
+                                        
+                                        const trackObject: Track = {
+                                            id: item.id,
+                                            title: item.title,
+                                            name: item.title,
+                                            album_id: item.album_id ?? 0,
+                                            audioUrl: item.audioUrl ?? ''
+                                        };
 
-                                // 4. ✅ СОЗДАЕМ ОБЪЕКТ TRACK ВРУЧНУЮ
-                                // Это гарантирует, что поле title существует и будет отображено
-                                const trackObject: Track = {
-                                    id: item.id,
-                                    title: item.title,      // ← Это отобразится в плеере
-                                    name: item.title,       // ← Дублируем, так как в типе Track есть оба поля
-                                    album_id: item.album_id ?? 0,
-                                    audioUrl: item.audioUrl ?? ''
-                                };
-
-                                // Передаем ОБЪЕКТ, а не строку
-                                setCurrentTrack(trackObject);
-                                setCurrentArtist(item.artist ?? null);
-                                setCurrentImage(item.img ?? null);
-                                
-                                // 5. Запускаем плеер
-                                playQueue(queueUrls, 0);
+                                        setCurrentTrack(trackObject);
+                                        setCurrentArtist(item.artist ?? null);
+                                        setCurrentImage(item.img ?? null);
+                                        
+                                        playQueue(queueTracks, 0);
+                                    } catch (e) {
+                                        console.error('Error loading artist tracks:', e);
+                                    }
+                                }
                             }
                         }
                     }}
                 >
                     <View style={styles.searchView}>
                         <View style={styles.info}>
-                            <Text style={{ fontFamily: "MyFont", color: "white", fontSize: 16 }} numberOfLines={1}>
+                            <Text style={{ fontFamily: "MyFont", color: "white", fontSize: 16 }}>
                                 {item.title}
                             </Text>
-                            <Text style={{ fontFamily: "MyFont", color: "#BABABA", fontSize: 12 }} numberOfLines={1}>
+                            <Text style={{ fontFamily: "MyFont", color: "#BABABA", fontSize: 12 }}>
                                 {getSubtitle()}
                             </Text>
                         </View>
@@ -185,17 +216,21 @@ export default function SearchScreen() {
                             </>
                         )}
                         
-                        {/* Иконка для Артиста (если нет фото) */}
-                        {item.type === 'artist' && (
+                        {/* Иконка для Артиста */}
+                        {isArtist && (
                             <View style={styles.artistIconContainer}>
-                                <Ionicons name="person" size={30} color="#BABABA" />
+                                {item.img ? (
+                                    <Animated.Image
+                                        source={{ uri: item.img }}
+                                        style={styles.centerImage}
+                                        resizeMode="contain"
+                                    />
+                                ) : (
+                                    <Ionicons name="person" size={30} color="#BABABA" />
+                                )}
                             </View>
                         )}
                     </View>
-                </TouchableOpacity>
-                
-                <TouchableOpacity style={{ marginLeft: 10 }}>
-                    <AntDesign name="more" size={24} color="white" style={styles.tripleVerticalMenu}/>
                 </TouchableOpacity>
             </View>
         );
@@ -212,6 +247,7 @@ export default function SearchScreen() {
                     <Ionicons name="arrow-back" style={styles.iconBack} />
                 </TouchableOpacity>
                 <TextInput
+                    ref={inputRef}
                     placeholder="Поиск"
                     value={query}
                     onChangeText={setQuery}
@@ -237,6 +273,7 @@ export default function SearchScreen() {
                 data={results}
                 keyExtractor={(item) => `${item.type}-${item.id}`}
                 renderItem={renderItem}
+                contentContainerStyle={{ paddingHorizontal: 10 }}
                 ListEmptyComponent={
                     query.length > 2 ? (
                         <Text style={{ color: '#888', textAlign: 'center', marginTop: 50, fontFamily: 'MyFont' }}>
@@ -256,15 +293,15 @@ const styles = StyleSheet.create({
     },
     searchBar: {
         width: "100%",
-        height: 80,
-        backgroundColor: "gray", // Чуть темнее для контраста
+        height: 90,
+        backgroundColor: "gray",
         flexDirection: 'row',
-        alignItems: 'center'
+        alignItems: 'center',
+        paddingTop: 30
     },
     backButton: {
         paddingHorizontal: 16,
         paddingVertical: 10,
-        marginTop: 15
     },
     iconBack: {
         fontSize: 30,
@@ -276,12 +313,10 @@ const styles = StyleSheet.create({
         fontSize: 18,
         color: "white",
         marginRight: 10,
-        marginTop: 15
     },
     clearTextButton: {
         paddingHorizontal: 16,
         paddingVertical: 10,
-        marginTop: 15
     },
     // Затемнение для винила
     darkLayout: {
@@ -342,11 +377,10 @@ const styles = StyleSheet.create({
         zIndex: 3
     },
     searchView: {
-        width: responsive.number(320),
+        width: '100%',
         height: 70,
         backgroundColor: '#3a3a3a',
         borderRadius: 10,
-        marginRight: 10,
         marginBottom: 5,
         overflow: 'hidden',
         position: 'relative',

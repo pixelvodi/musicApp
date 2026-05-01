@@ -8,7 +8,7 @@ import { styles } from '../../../utils/stylesHome';
 
 export default function Home() {
   const { albums, albumHowAboutListen, albumColors, clearReg, artist, modalVisible, setModalVisible, modalScreen, setModalScreen, closeModal,
-    userName, isEditing, setUserName, setIsEditing, toggleEdit, userEmail, setUserEmail, userAvatar, setUserAvatar, pickImage, userId } = useHomeLogic();
+    userName, isEditing, setUserName, setIsEditing, toggleEdit, userEmail, setUserEmail, userAvatar, setUserAvatar, pickImage, userId, accentColor, setAccentColor, changeAccentColor } = useHomeLogic();
   const [avatarKey, setAvatarKey] = useState(0);
   
   // Обновляем ключ аватара при изменении
@@ -44,7 +44,7 @@ export default function Home() {
             onPressOut={closeModal}
           >
             <View style={styles.modalView}>
-              {modalScreen === 'menu' ? (
+              {modalScreen === 'menu' && (
                 <>
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                     <Image key={avatarKey} style={styles.imgLogoModal} source={getAvatarUrl()} />
@@ -58,7 +58,7 @@ export default function Home() {
                   </View>
 
                   <View style={styles.modalContent}>
-                    <TouchableOpacity>
+                    <TouchableOpacity onPress={() => setModalScreen('settings')}>
                       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                         <Feather name="settings" size={24} color="white" />
                         <Text style={{ color: 'white', marginLeft: 15 }}>Настройки</Text>
@@ -73,7 +73,8 @@ export default function Home() {
                     </TouchableOpacity>
                   </View>
                 </>
-              ) : (
+              )}
+              {modalScreen === 'profile' && (
                 <View style={{ flex: 1 }}>
                   {/* Кнопка назад */}
                   <TouchableOpacity 
@@ -155,6 +156,48 @@ export default function Home() {
                     </TouchableOpacity>
 
                   </View>
+                </View>
+              )}
+              {modalScreen === 'settings' && (
+                <View style={{ flex: 1 }}>
+                  
+                  {/* Назад */}
+                  <TouchableOpacity 
+                    onPress={() => setModalScreen('menu')}
+                    style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 20 }}
+                  >
+                    <Feather name="chevron-left" size={24} color="white" />
+                    <Text style={{ color: 'white', marginLeft: 10 }}>Назад</Text>
+                  </TouchableOpacity>
+
+                  <Text style={{ color: 'white', fontSize: 24, marginBottom: 20 }}>
+                    Цвет интерфейса
+                  </Text>
+
+                  {/* Цвета */}
+                  <View style={{ flexDirection: 'row', gap: 15, flexWrap: 'wrap' }}>
+                    {['#003366', '#29abe2', '#0071bc', '#1b212c', '#ffffff', '#8cc63f'].map(color => (
+                      <TouchableOpacity
+                        key={color}
+                        onPress={() => setAccentColor(color)}
+                        style={{
+                          width: 50,
+                          height: 50,
+                          borderRadius: 25,
+                          backgroundColor: color,
+                          justifyContent: 'center',
+                          alignItems: 'center',
+                          borderWidth: accentColor === color ? 3 : 0,
+                          borderColor: 'white'
+                        }}
+                      >
+                        {accentColor === color && (
+                          <Feather name="check" size={20} color="white" />
+                        )}
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+
                 </View>
               )}
             </View>
@@ -334,12 +377,14 @@ export default function Home() {
               <TouchableOpacity
                 key={a.id ?? index}
                 style={styles.artistCard}
-                // onPress={() =>
-                //   // router.push({
-                //   //   pathname: '/tabs/albumsDetail',
-                //   //   params: { id: artist.id?.toString() ?? '' },
-                //   // })
-                // }
+                onPress={() => router.push({
+                    pathname: '/tabs/home/artistDetails',
+                    params: {
+                      name: a.name,           // Имя артиста
+                      imageUrl: a.img_artist, // Аватарка артиста (используется как фон на следующем экране)
+                      id: a.id?.toString()    // ID если понадобится для запросов
+                    },
+                  })}
               >
                 <Image
                   source={{ uri: a.img_artist }}
