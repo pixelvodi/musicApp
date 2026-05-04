@@ -1,5 +1,6 @@
 import { useTheme } from '@/utils/ThemeContext';
 import { useTrack } from '@/utils/TrackContext';
+import { API_URL } from '@/utils/apiConfig';
 import AntDesign from '@expo/vector-icons/AntDesign';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -8,6 +9,7 @@ import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Animated, FlatList, ImageBackground, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { FavoriteTrack, useLibraryLikesTrackLogic } from "../../../utils/libraryLikesTrackLogicc";
 import { playQueue } from "../../../utils/playMusic";
+import { truncateText } from "@/utils/truncateText";
 
 export default function Library() {
     const { favoritesTrack, loading, fetchfavoritesTrack } = useLibraryLikesTrackLogic();
@@ -28,13 +30,13 @@ export default function Library() {
         setCurrentUserId(id);
         if (id) {
             try {
-                const res = await fetch(`http://192.168.1.2:3000/user/${id}`);
+                const res = await fetch(`${API_URL}/user/${id}`);
                 const data = await res.json();
                 if (data.avatar) {
                     const avatarPath = data.avatar.startsWith('/avatar/') 
                         ? data.avatar.replace('/avatar/', '') 
                         : data.avatar;
-                    setUserAvatar(`http://192.168.1.2:3000/static/avatar/${avatarPath}`);
+                    setUserAvatar(`${API_URL}/static/avatar/${avatarPath}`);
                 }
             } catch (e) {
                 console.error('Error loading avatar:', e);
@@ -67,8 +69,8 @@ export default function Library() {
                     setCurrentImage(item.artwork);} }
             >
                 <View style={styles.info}>
-                    <Text style={styles.trackTitle} numberOfLines={1}>{item.title}</Text>
-                    <Text style={styles.trackArtistText} numberOfLines={1}>Трек • {item.artist}</Text>
+                    <Text style={styles.trackTitle} numberOfLines={1}>{truncateText(item.title, 25)}</Text>
+                    <Text style={styles.trackArtistText} numberOfLines={1}>Трек • {truncateText(item.artist, 20)}</Text>
                 </View>
                 
                 <View style={styles.darkLayout}/>
@@ -97,7 +99,7 @@ export default function Library() {
         console.log("Попытка удаления трека ID:", trackId);
         if (!currentUserId) return;
         try {
-            const response = await fetch(`http://192.168.1.2:3000/favorites/remove`, {
+            const response = await fetch(`${API_URL}/favorites/remove`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({

@@ -7,15 +7,24 @@ import { ActivityIndicator, View } from 'react-native';
 export default function Index() {
   useEffect(() => {
     const checkUser = async () => {
+      const keys = await AsyncStorage.getAllKeys();
+      console.log("📦 All AsyncStorage keys:", keys);
+      
       const email = await AsyncStorage.getItem('userEmail');
       const userId = await AsyncStorage.getItem('userId');
+      const appVersion = await AsyncStorage.getItem('appVersion');
       console.log("Checked user email:", email);
       console.log("Checked user ID:", userId);
+      console.log("App version:", appVersion);
 
-      if (email) {
-        router.replace('/tabs/home'); // Пользователь зарегистрирован
+      // Если нет appVersion - значит старый аккаунт или первая установка
+      if (!appVersion) {
+        await AsyncStorage.clear();
+        router.replace('/auth/registration');
+      } else if (email && userId) {
+        router.replace('/tabs/home');
       } else {
-        router.replace('/auth/registration'); // Пользователь не зарегистрирован
+        router.replace('/auth/registration');
       }
     };
 

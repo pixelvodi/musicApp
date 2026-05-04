@@ -2,6 +2,7 @@ import { playOrStop, playQueue } from '@/utils/playMusic';
 import { responsive } from '@/utils/responsive';
 import { useTheme } from '@/utils/ThemeContext';
 import { useTrack } from '@/utils/TrackContext';
+import { API_URL } from '@/utils/apiConfig';
 import Entypo from '@expo/vector-icons/Entypo';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
@@ -96,7 +97,7 @@ export default function AlbumDetails() {
     console.log("Проверяем статус избранного для альбома ID:", id, "и пользователя ID:", currentUserId);
 
     try {
-      const url = `http://192.168.1.2:3000/favoritesAlbum/check?user_id=${currentUserId}&album_id=${id}`;
+      const url = `${API_URL}/favoritesAlbum/check?user_id=${currentUserId}&album_id=${id}`;
       
       const response = await fetch(url);
       
@@ -135,7 +136,7 @@ const openMenu = async (track: Track) => {
   }
 
   try {
-    const url = `http://192.168.1.2:3000/favorites/check?user_id=${currentUserId}&track_id=${track.id}`;
+    const url = `${API_URL}/favorites/check?user_id=${currentUserId}&track_id=${track.id}`;
     console.log("Запрос к серверу:", url);
 
     const response = await fetch(url);
@@ -156,7 +157,7 @@ const removeFromFavorites = async (trackId: number) => {
   console.log("Попытка удаления трека ID:", trackId);
   if (!currentUserId) return;
   try {
-    const response = await fetch(`http://192.168.1.2:3000/favorites/remove`, {
+    const response = await fetch(`${API_URL}/favorites/remove`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -177,7 +178,7 @@ const removeFromFavorites = async (trackId: number) => {
 const addToFavorites = async (trackId: number) => {
   if (!currentUserId) return;
   try {
-    const response = await fetch(`http://192.168.1.2:3000/favorites/add`, {
+    const response = await fetch(`${API_URL}/favorites/add`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -199,7 +200,7 @@ const addToFavoritesAlbum = async (albumId: number) => {
   console.log("Попытка добавить альбом ID:", albumId);
   if (!currentUserId) return;
   try {
-    const response = await fetch(`http://192.168.1.2:3000/favoritesAlbum/add`, {
+    const response = await fetch(`${API_URL}/favoritesAlbum/add`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -220,7 +221,7 @@ const removeFromFavoritesAlbum = async (albumId: number) => {
   console.log("Попытка удаления альбома ID:", albumId);
   if (!currentUserId) return;
   try {
-    const response = await fetch(`http://192.168.1.2:3000/favoritesAlbum/remove`, {
+    const response = await fetch(`${API_URL}/favoritesAlbum/remove`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -243,7 +244,7 @@ const removeFromFavoritesAlbum = async (albumId: number) => {
           console.warn('id не определён');
           return;
         }
-        const response = await fetch(`http://192.168.1.2:3000/tracks/${id}`);
+        const response = await fetch(`${API_URL}/tracks/${id}`);
         const data = await response.json();
         const tracksWithArtwork = data.map((t: any) => ({
           ...t,
@@ -259,13 +260,13 @@ const removeFromFavoritesAlbum = async (albumId: number) => {
     const fetchAlbumInfo = async () => {
       if (!id) return;
       try {
-        const res = await fetch(`http://192.168.1.2:3000/album/${id}`);
+        const res = await fetch(`${API_URL}/album/${id}`);
         const data = await res.json();
         console.log('Album info:', data);
         if (data.artist_id) {
           setArtistId(String(data.artist_id));
           console.log('Fetching artist:', data.artist_id);
-          const artistRes = await fetch(`http://192.168.1.2:3000/artist/${data.artist_id}`);
+          const artistRes = await fetch(`${API_URL}/artist/${data.artist_id}`);
           const artistData = await artistRes.json();
           console.log('Artist data:', artistData);
           if (artistData && artistData.img_artist) {
@@ -317,7 +318,7 @@ const removeFromFavoritesAlbum = async (albumId: number) => {
             <TouchableOpacity onPress={async () => {
               if (artistId) {
                 try {
-                  const res = await fetch(`http://192.168.1.2:3000/artist/${artistId}`);
+                  const res = await fetch(`${API_URL}/artist/${artistId}`);
                   const data = await res.json();
                   router.push({
                     pathname: '/tabs/home/artistDetails',
@@ -346,7 +347,7 @@ const removeFromFavoritesAlbum = async (albumId: number) => {
 <TouchableOpacity onPress={async () => {
                 if (artistId) {
                   try {
-                    const res = await fetch(`http://192.168.1.2:3000/artist/${artistId}`);
+                    const res = await fetch(`${API_URL}/artist/${artistId}`);
                     const data = await res.json();
                     router.push({
                       pathname: '/tabs/home/artistDetails',
@@ -556,7 +557,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   scrollContent: {
-    paddingBottom: 40,
+    paddingBottom: 120,
     
   },
   titleAndSonger: {

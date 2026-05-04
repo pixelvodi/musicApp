@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const sqlite3 = require('sqlite3').verbose();
 const cors = require('cors');
@@ -23,8 +24,7 @@ const upload = multer({ storage: storage });
 const app = express();
 const port = 3000;
 
-// ⚠️ Замените этот IP на IP вашего ПК в локальной сети
-const localIP = '192.168.1.2';
+const localIP = process.env.SERVER_IP || '192.168.1.100';
 
 app.use(cors());
 app.use(express.json());
@@ -203,19 +203,24 @@ app.get('/artist/:id/tracks', (req, res) => {
   `, [artistId], (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
     
-    const tracks = rows.map(track => ({
-      id: track.id,
-      title: track.title,
-      artist: track.artist_name,
-      count: track.count || 0,
-      duration: '0:00',
-      imageUrl: track.artwork 
-        ? `http://${localIP}:${port}/static/img/${track.artwork}` 
-        : null,
-      audioUrl: track.filename 
-        ? `http://${localIP}:${port}/static/music/${track.filename}` 
-        : null
-    }));
+    const tracks = rows.map(track => {
+      const artworkUrl = track.artwork && !track.artwork.endsWith('.mp3')
+        ? `http://${localIP}:${port}/static/img/${track.artwork}`
+        : null;
+      
+      return {
+        id: track.id,
+        title: track.title,
+        artist: track.artist_name,
+        count: track.count || 0,
+        duration: '0:00',
+        imageUrl: artworkUrl,
+        artwork: artworkUrl,
+        audioUrl: track.filename 
+          ? `http://${localIP}:${port}/static/music/${track.filename}` 
+          : null
+      };
+    });
     
     res.json(tracks);
   });

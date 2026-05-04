@@ -311,22 +311,22 @@ export const styles = StyleSheet.create({
 
   textSongHorizontal: {
     position: 'absolute',
-    top: 125,
+    top: 120,
     left: 5,
     color: '#fff',
     zIndex: 4,
     fontFamily: 'MyFont',
-    fontSize: 20
+    fontSize: 16
   },
 
   textArtistHorizontal: {
     position: 'absolute',
-    top: 150,
+    top: 145,
     left: 5,
     color: '#6e6e6eff',
     zIndex: 4,
     fontFamily: 'MyFont',
-    fontSize: 13
+    fontSize: 11
   },
 
   horizontalviewArtist: {

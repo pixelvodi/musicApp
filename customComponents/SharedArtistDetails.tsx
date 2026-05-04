@@ -2,12 +2,14 @@ import { getDominantColor } from '@/utils/imgBackground';
 import { playOrStop, playQueue } from '@/utils/playMusic';
 import { useTheme } from '@/utils/ThemeContext';
 import { useTrack } from '@/utils/TrackContext';
+import { API_URL } from '@/utils/apiConfig';
 import { FontAwesome, Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Animated, ImageBackground, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { truncateText } from '@/utils/truncateText';
 interface Track {
   id: number;
   title: string;
@@ -46,7 +48,7 @@ export default function ArtistDetails() {
     if (!artistIdStr) return;
     setLoadingTracks(true);
     try {
-      const response = await fetch(`http://192.168.1.2:3000/artist/${artistIdStr}/tracks`);
+      const response = await fetch(`${API_URL}/artist/${artistIdStr}/tracks`);
       const data = await response.json();
       setTracks(data);
     } catch (error) {
@@ -58,14 +60,17 @@ export default function ArtistDetails() {
 
   const handleTrackPress = async (track: Track, index: number) => {
     try {
-      await fetch(`http://192.168.1.2:3000/tracks/${track.id}/increment-count`, {
+      await fetch(`${API_URL}/tracks/${track.id}/increment-count`, {
         method: 'POST',
       });
       setTracks(prev => prev.map(t => 
         t.id === track.id ? { ...t, count: (t.count || 0) + 1 } : t
       ));
       
-      const validTracks = tracks.filter(t => t.audioUrl);
+      const validTracks = tracks.filter(t => t.audioUrl).map(t => ({
+        ...t,
+        artwork: t.artwork || undefined
+      }));
       
       const trackForPlayer = {
         id: track.id,
@@ -74,16 +79,16 @@ export default function ArtistDetails() {
         name: track.title,
         audioUrl: track.audioUrl,
         artist: name as string,
-        artwork: track.imageUrl || undefined,
+        artwork: track.artwork || undefined,
       };
       
       setCurrentTrack(trackForPlayer);
       setCurrentArtist(name as string);
-      setCurrentImage(track.imageUrl ? track.imageUrl : null);
+      setCurrentImage(track.artwork ? track.artwork : null);
       
       if (validTracks.length > 0) {
         const validIndex = Math.min(index, validTracks.length - 1);
-        playQueue(validTracks, validIndex);
+        playQueue(validTracks as any, validIndex);
       }
     } catch (error) {
       console.error('Error incrementing count:', error);
@@ -94,7 +99,7 @@ export default function ArtistDetails() {
     if (!artistIdStr) return;
     setLoadingAlbums(true);
     try {
-      const response = await fetch(`http://192.168.1.2:3000/artist/${artistIdStr}/albums`);
+      const response = await fetch(`${API_URL}/artist/${artistIdStr}/albums`);
       const data = await response.json();
       setAlbums(data);
       
@@ -137,7 +142,7 @@ export default function ArtistDetails() {
       }
       setUserId(id);
       
-      const response = await fetch(`http://192.168.1.2:3000/favoritesArtist/check?user_id=${id}&artist_id=${artistIdStr}`);
+      const response = await fetch(`${API_URL}/favoritesArtist/check?user_id=${id}&artist_id=${artistIdStr}`);
       console.log('Check response status:', response.status);
       const data = await response.json();
       console.log('Check data:', data);
@@ -156,7 +161,7 @@ export default function ArtistDetails() {
     try {
       if (isSubscribed) {
         console.log('Removing subscription...');
-        await fetch('http://192.168.1.2:3000/favoritesArtist/remove', {
+        await fetch(`${API_URL}/favoritesArtist/remove`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ user_id: userId, artist_id: artistIdStr }),
@@ -164,7 +169,7 @@ export default function ArtistDetails() {
         setIsSubscribed(false);
       } else {
         console.log('Adding subscription...');
-        await fetch('http://192.168.1.2:3000/favoritesArtist/add', {
+        await fetch(`${API_URL}/favoritesArtist/add`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ user_id: userId, artist_id: artistIdStr }),
@@ -237,11 +242,15 @@ export default function ArtistDetails() {
                   if (result !== null) {
                     setIsPlaying(result.isPlaying);
                   }
-                } else {
-                  const validTracks = tracks.filter(t => t.audioUrl);
+} else {
+                  const validTracks = tracks.filter(t => t.audioUrl).map(t => ({
+                    ...t,
+                    artwork: t.artwork || undefined
+                  }));
+                  const firstTrackWithImage = validTracks.find(t => t.artwork);
                   setCurrentTrack(validTracks[0] as any);
                   setCurrentArtist(name as string);
-                  setCurrentImage(imageUrl as string);
+                  setCurrentImage(firstTrackWithImage?.artwork || imageUrl as string);
                   playQueue(validTracks as any, 0);
                   setIsPlaying(true);
                 }
@@ -309,8 +318,8 @@ export default function ArtistDetails() {
                       />
                     )}
                   </View>
-                  <Text style={styles.albumTitle} numberOfLines={1}>{album.title}</Text>
-                  <Text style={styles.albumArtist} numberOfLines={1}>{name}</Text>
+                  <Text style={styles.albumTitle} numberOfLines={1}>{truncateText(album.title, 20)}</Text>
+                  <Text style={styles.albumArtist} numberOfLines={1}>{truncateText(name, 20)}</Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>

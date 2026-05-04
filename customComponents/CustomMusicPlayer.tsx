@@ -1,5 +1,6 @@
 import { useTrack } from '@/utils/TrackContext';
 import { playOrStop } from '@/utils/playMusic';
+import { API_URL } from '@/utils/apiConfig';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -26,13 +27,13 @@ const { width, height } = Dimensions.get('window');
 
 export default function MusicPlayer() {
   const { currentTrack, currentArtist, currentImage } = useTrack();
+  const imageUrlString = Array.isArray(currentImage) ? currentImage[0] : currentImage;
   const [menuVisible, setMenuVisible] = useState(false);
   const playbackState = usePlaybackState();
   const currentState = playbackState?.state ?? State.None;
   const isActuallyPlaying = currentState === State.Playing;
   const { position, duration } = useProgress();
   const [lyricsArray, setLyricsArray] = useState<{id: string, text: string}[]>([]);
-  const imageUrlString = Array.isArray(currentImage) ? currentImage[0] : currentImage;
   const [bgColor, setBgColor] = useState('#121212');
   
   const rotation = useRef(new Animated.Value(0)).current;
@@ -81,7 +82,7 @@ export default function MusicPlayer() {
 
   const fetchLyrics = async (trackId: string) => {
     try {
-      const response = await fetch('http://192.168.1.2:3000/getTextTrack', {
+      const response = await fetch(`${API_URL}/getTextTrack`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -139,13 +140,13 @@ export default function MusicPlayer() {
                 style={[styles.vinyl, { transform: [{ rotate: rotateInterpolate }] }]}
                 resizeMode="contain"
               />
-              {typeof currentImage === 'string' && currentImage !== '' && (
+              {imageUrlString ? (
                 <Animated.Image 
-                  source={{ uri: currentImage }}
+                  source={{ uri: imageUrlString }}
                   style={[styles.centerImage, { transform: [{ rotate: rotateInterpolate }] }]}
                   resizeMode="cover"
                 />
-              )}
+              ) : null}
             </View>
           </View>
           
@@ -166,19 +167,18 @@ export default function MusicPlayer() {
       <Modal visible={menuVisible} animationType="slide" presentationStyle="fullScreen" onRequestClose={() => setMenuVisible(false)}>
         <View style={[styles.fullScreenContainer, { backgroundColor: bgColor }]}>
           <View style={styles.darkLaouyt} pointerEvents="none">
-          {/* Декоративный винил сбоку */}
-          <View style={styles.sideVinylContainer} pointerEvents="none">
-            <Image source={require('./images/pngPLastinka.png')} style={styles.sideVinyl} />
-            {typeof currentImage === 'string' && currentImage !== '' && (
+            <View style={styles.sideVinylContainer} pointerEvents="none">
+              <Image source={require('./images/pngPLastinka.png')} style={styles.sideVinyl} />
+              {typeof currentImage === 'string' && currentImage !== '' && (
                 <Animated.Image 
                   source={{ uri: currentImage }}
                   style={[styles.centerImageModal, { transform: [{ rotate: rotateInterpolate }] }]}
                   resizeMode="cover"
                 />
               )}
+            </View>
           </View>
-          </View>
-
+          
           <SafeAreaView style={{ flex: 1 }}>
             {/* Header */}
             <View style={styles.fullHeader}>

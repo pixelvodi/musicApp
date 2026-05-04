@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { API_URL } from './apiConfig';
 // Импортируем сам TrackPlayer и нужные перечисления/типы отдельно
 import TrackPlayer, {
   AppKilledPlaybackBehavior,
@@ -19,7 +20,7 @@ export type QueueTrack = {
 };
 
 export const fetchQueue = async (ids: number[]): Promise<QueueTrack[]> => {
-  const url = 'http://192.168.1.2:3000/getQueue';
+  const url = `${API_URL}/getQueue`;
   console.log("--- ОТПРАВКА ЗАПРОСА НА:", url, "с ID:", ids);
 
   try {
@@ -51,8 +52,7 @@ export const playQueue = async (tracks: any[], startIndex = 0) => {
       url: track.audioUrl,
       title: track.title || "Без названия",
       artist: track.artist || "Неизвестный артист",
-      // ВАЖНО: Добавляем поле artwork, которое мы берем из ответа сервера
-      artwork: track.artwork ? track.artwork : undefined
+      artwork: track.artwork || track.imageUrl || undefined
     }));
 
     // 3. Проверяем в консоли, что artwork теперь есть!

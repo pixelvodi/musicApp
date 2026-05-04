@@ -2,6 +2,7 @@ import { responsive } from '@/utils/responsive';
 import AntDesign from '@expo/vector-icons/AntDesign';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
+import { API_URL } from '@/utils/apiConfig';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -22,7 +23,7 @@ export default function Registration() {
   const [isVisibleConfirm, setIsVisibleConfirm] = useState(false);
 
   useEffect(() => {
-    axios.get('http://192.168.1.2:3000/albumsImg')
+    axios.get(`${API_URL}/albumsImg`)
       .then(response => {
         setAlbums(response.data[0].imageUrl)
         console.log(response.data)
@@ -61,13 +62,14 @@ export default function Registration() {
     return;
     }
     try {
-      const response = await axios.post(`http://192.168.1.2:3000/users/register`, {
+      const response = await axios.post(`${API_URL}/users/register`, {
         email,
         password
       });
 
       await AsyncStorage.setItem('userEmail', email);
       await AsyncStorage.setItem('userId', String(response.data.userId));
+      await AsyncStorage.setItem('appVersion', '1.0.0');
       router.push('/tabs/home');
 
       console.log("Norm", response.data)

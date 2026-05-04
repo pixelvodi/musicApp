@@ -7,8 +7,8 @@ type Track = {
   album_id: number;
   name: string;
   audioUrl?: string;
-  artist?: string; // Добавим для удобства
-  artwork?: string; // Добавим для удобства
+  artist?: string;
+  artwork?: string;
 };
 
 type TrackContextType = {
@@ -34,12 +34,10 @@ export const TrackProvider = ({ children }: { children: React.ReactNode }) => {
   const [currentArtist, setCurrentArtist] = useState<string | null>(null);
   const [currentImage, setCurrentImage] = useState<string | null>(null);
 
-  // Подписываемся на события плеера
   useTrackPlayerEvents([Event.PlaybackActiveTrackChanged], async (event) => {
     if (event.type === Event.PlaybackActiveTrackChanged && event.track) {
       const { track } = event;
       
-      // Обновляем контекст данными из реально играющего трека
       setCurrentTrack({
         id: track.id ?? '',
         title: track.title ?? 'Unknown Title',
@@ -48,7 +46,11 @@ export const TrackProvider = ({ children }: { children: React.ReactNode }) => {
         audioUrl: track.url as string,
       });
       setCurrentArtist(track.artist ?? 'Неизвестен');
-      setCurrentImage(track.artwork ?? null);
+      
+      const artwork = (track as any).artwork;
+      if (artwork) {
+        setCurrentImage(artwork);
+      }
     }
   });
 

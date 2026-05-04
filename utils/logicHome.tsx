@@ -2,6 +2,7 @@ import { getDominantColor } from '@/utils/imgBackground';
 import { useTheme } from '@/utils/ThemeContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
+import { API_URL } from './apiConfig';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -46,7 +47,7 @@ export const useHomeLogic = () => {
 
       if (id) {
         try {
-          const res = await axios.get(`http://192.168.1.2:3000/getUserNameOrEmail?user_id=${id}`);
+          const res = await axios.get(`${API_URL}/getUserNameOrEmail?user_id=${id}`);
           if (res.data.avatar) {
             setUserAvatar(res.data.avatar);
           }
@@ -55,7 +56,7 @@ export const useHomeLogic = () => {
         }
       }
 
-      axios.get<Album[]>('http://192.168.1.2:3000/albums')
+      axios.get<Album[]>(`${API_URL}/albums`)
         .then(res => setAlbums(res.data))
         .catch(err => console.error('Ошибка альбомов:', err));
     };
@@ -96,7 +97,7 @@ loadAccentColor();
     if (!userId) return;
 
     try {
-      const res = await axios.get(`http://192.168.1.2:3000/getUserNameOrEmail?user_id=${userId}`);
+      const res = await axios.get(`${API_URL}/getUserNameOrEmail?user_id=${userId}`);
 
       if (res.data.email) setUserEmail(res.data.email);
       if (res.data.username) setUserName(res.data.username);
@@ -114,7 +115,7 @@ loadAccentColor();
   const toggleEdit = async () => {
     if (isEditing) {
       try {
-        await axios.post(`http://192.168.1.2:3000/users/updateUser`, {
+        await axios.post(`${API_URL}/users/updateUser`, {
           user_id: userId,
           new_username: userName,
           new_email: userEmail,
@@ -160,7 +161,7 @@ loadAccentColor();
     } as any);
 
     try {
-      const res = await axios.post('http://192.168.1.2:3000/users/uploadAvatar', formData, {
+      const res = await axios.post(`${API_URL}/users/uploadAvatar`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
 
@@ -175,7 +176,7 @@ loadAccentColor();
   
   // Альбом "Как насчет?"
   useEffect(() => {
-    axios.get<Album[]>('http://192.168.1.2:3000/albumsforhowaboutlisten')
+    axios.get<Album[]>(`${API_URL}/albumsforhowaboutlisten`)
       .then(res => setAlbumHowAboutlisten(res.data))
       .catch(err => console.error('Ошибка альбомов:', err));
   }, []);
@@ -208,7 +209,7 @@ loadAccentColor();
   
   // Загрузка списка артистов
   useEffect(() => {
-    axios.get<Artist[]>('http://192.168.1.2:3000/artist')
+    axios.get<Artist[]>(`${API_URL}/artist`)
       .then(res => setArtist(res.data))
       .catch(err => console.error('Ошибка артистов:', err));
   }, []);

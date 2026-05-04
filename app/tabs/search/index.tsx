@@ -1,13 +1,14 @@
 import { playQueue } from '@/utils/playMusic';
 import { responsive } from '@/utils/responsive';
 import { useTrack } from '@/utils/TrackContext';
+import { API_URL } from '@/utils/apiConfig';
 import AntDesign from '@expo/vector-icons/AntDesign';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Audio } from 'expo-av';
 import { useRouter } from 'expo-router';
 import { useIsFocused } from '@react-navigation/native';
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, FlatList, SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Animated, FlatList, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 // 1. Объединенный тип для всех результатов поиска
 type SearchResult = {
   id: number;
@@ -68,7 +69,7 @@ export default function SearchScreen() {
             try {
                 // Используем ваш IP для локальной сети
                 const res = await fetch(
-                    `http://192.168.1.2:3000/search?query=${encodeURIComponent(query)}`
+                    `${API_URL}/search?query=${encodeURIComponent(query)}`
                 );
                 const data = await res.json();
                 setResults(data.results);
@@ -131,7 +132,7 @@ if (startIndex !== -1) {
                                 const artistId = item.artist_id;
                                 if (artistId) {
                                     try {
-                                        const res = await fetch(`http://192.168.1.2:3000/artist/${artistId}/tracks`);
+                                        const res = await fetch(`${API_URL}/artist/${artistId}/tracks`);
                                         const artistTracks = await res.json();
                                         
                                         const queueTracks = artistTracks
@@ -268,20 +269,23 @@ if (startIndex !== -1) {
             </View>
 
             {/* SEARCH RESULTS */}
-            <FlatList
-                style={{ width: '100%' }}
-                data={results}
-                keyExtractor={(item) => `${item.type}-${item.id}`}
-                renderItem={renderItem}
-                contentContainerStyle={{ paddingHorizontal: 10 }}
-                ListEmptyComponent={
-                    query.length > 2 ? (
-                        <Text style={{ color: '#888', textAlign: 'center', marginTop: 50, fontFamily: 'MyFont' }}>
-                            Ничего не найдено по запросу "{query}"
-                        </Text>
-                    ) : null
-                }
-            />
+            <ScrollView style={{ width: '100%' }} showsVerticalScrollIndicator={false}>
+                <FlatList
+                    style={{ width: '100%' }}
+                    data={results}
+                    keyExtractor={(item) => `${item.type}-${item.id}`}
+                    renderItem={renderItem}
+                    contentContainerStyle={{ paddingHorizontal: 10, paddingBottom: 100 }}
+                    scrollEnabled={false}
+                    ListEmptyComponent={
+                        query.length > 2 ? (
+                            <Text style={{ color: '#888', textAlign: 'center', marginTop: 50, fontFamily: 'MyFont' }}>
+                                Ничего не найдено по запросу "{query}"
+                            </Text>
+                        ) : null
+                    }
+                />
+            </ScrollView>
         </SafeAreaView>
     );
 }

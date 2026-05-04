@@ -5,6 +5,8 @@ import { Animated, Image, ScrollView, StatusBar, Text, TextInput, TouchableOpaci
 import Modal from 'react-native-modal';
 import { useHomeLogic } from '../../../utils/logicHome';
 import { styles } from '../../../utils/stylesHome';
+import { truncateText } from '@/utils/truncateText';
+import { API_URL } from '@/utils/apiConfig';
 
 export default function Home() {
   const { albums, albumHowAboutListen, albumColors, clearReg, artist, modalVisible, setModalVisible, modalScreen, setModalScreen, closeModal,
@@ -18,7 +20,7 @@ export default function Home() {
 
   const getAvatarUrl = () => {
     if (!userAvatar) return require('@/assets/images/ava.jpg');
-    return { uri: `http://192.168.1.2:3000/static${userAvatar}?t=${Date.now()}` };
+    return { uri: `${API_URL}/static${userAvatar}?t=${Date.now()}` };
   };
   return (
     <View style={styles.container}>
@@ -246,7 +248,7 @@ export default function Home() {
                         />
                       )}
                     </View>
-                  <Text style={styles.textSong1}>{album.name}</Text>
+                  <Text style={styles.textSong1}>{truncateText(album.name, 18)}</Text>
                 </TouchableOpacity>
               );
             })}
@@ -302,7 +304,7 @@ export default function Home() {
                   )}
                 </View>
                 <View style={styles.howAboutAlbumName}>
-                  <Text style={{color: '#ffffffff', zIndex: 4, fontFamily: 'MyFont', fontSize: 40}}>{album.name}</Text>
+                  <Text style={{color: '#ffffffff', zIndex: 4, fontFamily: 'MyFont', fontSize: 40}}>{truncateText(album.name, 15)}</Text>
                 </View>
                 <View style={styles.count}>
                   {album.track_count == 1 && (
@@ -362,8 +364,8 @@ export default function Home() {
                         />
                       )}
                     </View>
-                  <Text style={styles.textSongHorizontal}>{album.name}</Text>
-                  <Text style={styles.textArtistHorizontal}>{album.artist}</Text>
+                  <Text style={styles.textSongHorizontal}>{truncateText(album.name, 15)}</Text>
+                  <Text style={styles.textArtistHorizontal}>{truncateText(album.artist, 15)}</Text>
                 </TouchableOpacity>
               );
             })}
@@ -391,7 +393,7 @@ export default function Home() {
                   style={styles.artistAvatar}
                 />
                 <Text style={styles.artistName} numberOfLines={1}>
-                  {a.name}
+                  {truncateText(a.name, 18)}
                 </Text>
               </TouchableOpacity>
             ))}

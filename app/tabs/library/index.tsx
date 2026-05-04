@@ -2,6 +2,7 @@ import { getDominantColor } from '@/utils/imgBackground';
 import { useLibraryLikesTrackLogic } from '@/utils/libraryLikesTrackLogicc';
 import { useTheme } from '@/utils/ThemeContext';
 import { useTrack } from '@/utils/TrackContext';
+import { API_URL } from '@/utils/apiConfig';
 import AntDesign from '@expo/vector-icons/AntDesign';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
@@ -10,6 +11,7 @@ import React, { useEffect, useState } from 'react';
 import { FlatList, Image, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { FavoriteTrack, useLibraryLogic } from "../../../utils/libraryLogic";
 import { responsive } from "../../../utils/responsive";
+import { truncateText } from "@/utils/truncateText";
 
 export type Album = {
   id: number;
@@ -37,7 +39,7 @@ export default function Library() {
     const { accentColor } = useTheme();
 
     useEffect(() => {
-        axios.get<Album[]>('http://192.168.1.2:3000/albums')
+        axios.get<Album[]>(`${API_URL}/albums`)
         .then(res => setAlbums(res.data))
         .catch(err => console.error('Error fetching albums:', err));
     }, []);
@@ -45,7 +47,7 @@ export default function Library() {
     const fetchFavoriteAlbums = async () => {
     if (!currentUserId) return;
     try {
-        const response = await fetch(`http://192.168.1.2:3000/favoritesAlbum/${currentUserId}`);
+        const response = await fetch(`${API_URL}/favoritesAlbum/${currentUserId}`);
         console.log(`Запрос на избранные альбомы для пользователя ${currentUserId} отправлен.`);
         const data = await response.json();
         console.log("DATA FROM SERVER:", data)
@@ -58,7 +60,7 @@ export default function Library() {
     const fetchFavoriteArtists = async () => {
         if (!currentUserId) return;
         try {
-            const response = await fetch(`http://192.168.1.2:3000/favoritesArtist/${currentUserId}`);
+            const response = await fetch(`${API_URL}/favoritesArtist/${currentUserId}`);
             const data = await response.json();
             setFavoriteArtists(data);
             
@@ -163,7 +165,7 @@ useEffect(() => {
             </>
         )}
         {item.type === 'artist' && <View style={styles.darkLaouyt}/>}
-        <Text style={[styles.albumName, item.type === 'artist' && styles.artistNameBottom]} numberOfLines={1}>{item.name}</Text>
+        <Text style={[styles.albumName, item.type === 'artist' && styles.artistNameBottom]} numberOfLines={1}>{truncateText(item.name, 15)}</Text>
     </TouchableOpacity>
 );
     return (
